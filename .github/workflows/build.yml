@@ -42,35 +42,89 @@ jobs:
 
       - name: Set active Xcode
         run: |
-          echo "Available Xcode installations:"
-          ls -d /Applications/Xcode*.app || true
+          python3 - << 'EOF'
+          import subprocess
+          import json
+          import glob
+          import os
+          import sys
 
-          SELECTED_XCODE=""
-          for app in /Applications/Xcode_26*.app /Applications/Xcode*.app; do
-            if [ -d "$app" ]; then
-              if DEVELOPER_DIR="$app/Contents/Developer" xcrun --show-sdk-path --sdk iphoneos >/dev/null 2>&1; then
-                SELECTED_XCODE="$app"
-                echo "Found Xcode with iPhoneOS SDK: $app"
-                break
-              fi
-            fi
-          done
+          installed_builds = set()
+          try:
+              simctl_out = subprocess.check_output(["xcrun", "simctl", "list", "runtimes", "-j"]).decode()
+              runtimes_data = json.loads(simctl_out)
+              for r in runtimes_data.get("runtimes", []):
+                  if r.get("isAvailable", True) and r.get("buildversion"):
+                      installed_builds.add(r.get("buildversion"))
+          except Exception as e:
+              print(f"Error querying simctl runtimes: {e}")
 
-          if [ -n "$SELECTED_XCODE" ]; then
-            sudo xcode-select -s "$SELECTED_XCODE"
-          else
-            for app in /Applications/Xcode_26*.app /Applications/Xcode.app; do
-              if [ -d "$app" ]; then
-                sudo xcode-select -s "$app"
-                break
-              fi
-            done
-            echo "Downloading iOS platform runtime..."
-            sudo xcodebuild -downloadPlatform iOS || true
-          fi
+          print(f"Detected simctl runtime build versions: {installed_builds}")
+          runner_hint_builds = {"23F77", "23E254a", "23C54"}
+          all_valid_builds = installed_builds | runner_hint_builds
+          print(f"All valid target build versions: {all_valid_builds}")
+
+          apps = sorted(glob.glob("/Applications/Xcode*.app"), reverse=True)
+          print(f"Found Xcode applications: {apps}")
+
+          selected = None
+          for app in apps:
+              dev_dir = os.path.join(app, "Contents/Developer")
+              env = dict(os.environ, DEVELOPER_DIR=dev_dir)
+              try:
+                  sdk_path = subprocess.check_output(
+                      ["xcrun", "--show-sdk-path", "--sdk", "iphoneos"],
+                      env=env, stderr=subprocess.DEVNULL
+                  ).decode().strip()
+                  sim_build = subprocess.check_output(
+                      ["xcrun", "--show-sdk-build-version", "--sdk", "iphonesimulator"],
+                      env=env, stderr=subprocess.DEVNULL
+                  ).decode().strip()
+                  print(f"Candidate {app}: sim_build={sim_build}, sdk_path={sdk_path}")
+                  if sim_build in all_valid_builds:
+                      selected = app
+                      print(f"==> Matched Xcode with compatible runtime: {app} (build {sim_build})")
+                      break
+              except Exception as ex:
+                  print(f"Candidate {app} check failed: {ex}")
+                  continue
+
+          if not selected:
+              print("No exact runtime match found, falling back to newest Xcode with iPhoneOS SDK...")
+              for app in apps:
+                  dev_dir = os.path.join(app, "Contents/Developer")
+                  env = dict(os.environ, DEVELOPER_DIR=dev_dir)
+                  try:
+                      sdk_path = subprocess.check_output(
+                          ["xcrun", "--show-sdk-path", "--sdk", "iphoneos"],
+                          env=env, stderr=subprocess.DEVNULL
+                      ).decode().strip()
+                      selected = app
+                      print(f"==> Fallback to: {app}")
+                      break
+                  except Exception:
+                      continue
+
+          if selected:
+              subprocess.check_call(["sudo", "xcode-select", "-s", selected])
+              dev_dir = os.path.join(selected, "Contents/Developer")
+              github_env = os.environ.get("GITHUB_ENV")
+              if github_env:
+                  with open(github_env, "a") as f:
+                      f.write(f"DEVELOPER_DIR={dev_dir}\n")
+              print(f"Selected Xcode: {selected}")
+          else:
+              print("ERROR: No suitable Xcode found!")
+              sys.exit(1)
+          EOF
 
           xcodebuild -version
           xcrun --show-sdk-path --sdk iphoneos || true
+          xcrun --show-sdk-build-version --sdk iphonesimulator || true
+
+          sudo xcodebuild -downloadPlatform iOS || true
+          killall -9 com.apple.CoreSimulator.CoreSimulatorService 2>/dev/null || true
+          xcrun simctl list devices || true
 
       - name: Create canonical source directory
         run: |
