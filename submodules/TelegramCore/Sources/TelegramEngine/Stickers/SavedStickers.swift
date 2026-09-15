@@ -10,14 +10,7 @@ public enum SavedStickerResult {
 
 func _internal_toggleStickerSaved(postbox: Postbox, network: Network, accountPeerId: PeerId, file: TelegramMediaFile, saved: Bool) -> Signal<SavedStickerResult, AddSavedStickerError> {
     if saved {
-        return postbox.transaction { transaction -> Signal<SavedStickerResult, AddSavedStickerError> in
-            let isPremium = transaction.getPeer(accountPeerId)?.isPremium ?? false
-            let items = transaction.getOrderedListItems(collectionId: Namespaces.OrderedItemList.CloudSavedStickers)
-            
-            let appConfiguration = transaction.getPreferencesEntry(key: PreferencesKeys.appConfiguration)?.get(AppConfiguration.self) ?? .defaultValue
-            let limitsConfiguration = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
-            let premiumLimitsConfiguration = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
-            
+        return postbox.transaction { _ -> Signal<SavedStickerResult, AddSavedStickerError> in
             return addSavedSticker(postbox: postbox, network: network, file: file, limit: Int.max)
             |> map { _ -> SavedStickerResult in
                 return .generic
