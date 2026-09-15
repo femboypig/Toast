@@ -33,7 +33,21 @@ private func managedRecentMedia(postbox: Postbox, network: Network, collectionId
                     }
 
                     return postbox.transaction { transaction -> Void in
-                        transaction.replaceOrderedItemListItems(collectionId: collectionId, items: items)
+                        if collectionId == Namespaces.OrderedItemList.CloudSavedStickers {
+                            let existingItems = transaction.getOrderedListItems(collectionId: collectionId)
+                            var mergedItems = items
+                            var mergedIds = Set(items.map { $0.id.makeData() })
+                            for existing in existingItems {
+                                let idData = existing.id.makeData()
+                                if !mergedIds.contains(idData) {
+                                    mergedIds.insert(idData)
+                                    mergedItems.append(existing)
+                                }
+                            }
+                            transaction.replaceOrderedItemListItems(collectionId: collectionId, items: mergedItems)
+                        } else {
+                            transaction.replaceOrderedItemListItems(collectionId: collectionId, items: items)
+                        }
                     }
                 } else {
                     return .complete()
