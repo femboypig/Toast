@@ -70,6 +70,11 @@ jobs:
           # Import fake certificates into temporary keychain
           python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
 
+          EXTRA_ARGS=""
+          if [[ "${{ inputs.configuration }}" == *"sim"* ]]; then
+            EXTRA_ARGS="--disableProvisioningProfiles"
+          fi
+
           # Build unsigned IPA using Bazel & Make.py
           python3 -u build-system/Make/Make.py \
             --bazelUserRoot="$BAZEL_USER_ROOT" \
@@ -78,7 +83,7 @@ jobs:
             build \
             --configurationPath="build-system/toast-configuration.json" \
             --codesigningInformationPath=build-system/fake-codesigning \
-            --disableProvisioningProfiles \
+            $EXTRA_ARGS \
             --configuration="${{ inputs.configuration }}" \
             --buildNumber="$BUILD_NUMBER" \
             --outputBuildArtifactsPath="$SOURCE_DIR/build/artifacts"
