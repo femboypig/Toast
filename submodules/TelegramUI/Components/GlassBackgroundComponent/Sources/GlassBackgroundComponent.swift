@@ -7,6 +7,35 @@ import UIKitRuntimeUtils
 import CoreImage
 import AppBundle
 
+public final class UIGlassEffect: UIVisualEffect {
+    public enum Style {
+        case regular
+        case clear
+    }
+    public var tintColor: UIColor?
+    public var isInteractive: Bool = false
+
+    public init(style: Style) {
+        super.init()
+    }
+
+    public required init?(coder: NSCoder) {
+        super.init(coder: coder)
+    }
+}
+
+public final class UIGlassContainerEffect: UIVisualEffect {
+    public var spacing: CGFloat = 0.0
+
+    public override init() {
+        super.init()
+    }
+
+    public required init?(coder: NSCoder) {
+        super.init(coder: coder)
+    }
+}
+
 private final class ContentContainer: UIView {
     private let maskContentView: UIView
     
