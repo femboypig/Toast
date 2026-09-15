@@ -42,13 +42,35 @@ jobs:
 
       - name: Set active Xcode
         run: |
-          for app in /Applications/Xcode_26*.app /Applications/Xcode.app; do
+          echo "Available Xcode installations:"
+          ls -d /Applications/Xcode*.app || true
+
+          SELECTED_XCODE=""
+          for app in /Applications/Xcode_26*.app /Applications/Xcode*.app; do
             if [ -d "$app" ]; then
-              sudo xcode-select -s "$app"
-              break
+              if DEVELOPER_DIR="$app/Contents/Developer" xcrun --show-sdk-path --sdk iphoneos >/dev/null 2>&1; then
+                SELECTED_XCODE="$app"
+                echo "Found Xcode with iPhoneOS SDK: $app"
+                break
+              fi
             fi
           done
+
+          if [ -n "$SELECTED_XCODE" ]; then
+            sudo xcode-select -s "$SELECTED_XCODE"
+          else
+            for app in /Applications/Xcode_26*.app /Applications/Xcode.app; do
+              if [ -d "$app" ]; then
+                sudo xcode-select -s "$app"
+                break
+              fi
+            done
+            echo "Downloading iOS platform runtime..."
+            sudo xcodebuild -downloadPlatform iOS || true
+          fi
+
           xcodebuild -version
+          xcrun --show-sdk-path --sdk iphoneos || true
 
       - name: Create canonical source directory
         run: |
