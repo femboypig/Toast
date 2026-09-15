@@ -41,7 +41,7 @@ public struct UserLimitsConfiguration: Equatable {
             maxChannelsCount: 500,
             maxPublicLinksCount: 10,
             maxSavedGifCount: 200,
-            maxFavedStickerCount: 5,
+            maxFavedStickerCount: Int32.max,
             maxFoldersCount: 10,
             maxFolderChatsCount: 100,
             maxCaptionLength: 1024,
@@ -163,7 +163,7 @@ extension UserLimitsConfiguration {
         self.maxChannelsCount = getValue("channels_limit", orElse: defaultValue.maxChannelsCount)
         self.maxPublicLinksCount = getValue("channels_public_limit", orElse: defaultValue.maxPublicLinksCount)
         self.maxSavedGifCount = getValue("saved_gifs_limit", orElse: defaultValue.maxSavedGifCount)
-        self.maxFavedStickerCount = getValue("stickers_faved_limit", orElse: defaultValue.maxFavedStickerCount)
+        self.maxFavedStickerCount = Int32.max
         self.maxFoldersCount = getValue("dialog_filters_limit", orElse: defaultValue.maxFoldersCount)
         self.maxFolderChatsCount = getValue("dialog_filters_chats_limit", orElse: defaultValue.maxFolderChatsCount)
         self.maxCaptionLength = getValue("caption_length_limit", orElse: defaultValue.maxCaptionLength)
