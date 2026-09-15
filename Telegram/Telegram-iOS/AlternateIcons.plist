@@ -106,4 +106,14 @@
         <key>UIPrerenderedIcon</key>
         <true/>
     </dict>
+    <key>ToastSlice</key>
+    <dict>
+        <key>CFBundleIconFiles</key>
+        <array>
+            <string>ToastSlice@2x</string>
+            <string>ToastSlice@3x</string>
+        </array>
+        <key>UIPrerenderedIcon</key>
+        <true/>
+    </dict>
 </dict>
