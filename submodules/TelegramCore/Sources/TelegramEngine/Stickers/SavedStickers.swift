@@ -18,16 +18,7 @@ func _internal_toggleStickerSaved(postbox: Postbox, network: Network, accountPee
             let limitsConfiguration = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: false)
             let premiumLimitsConfiguration = UserLimitsConfiguration(appConfiguration: appConfiguration, isPremium: true)
             
-            let result: SavedStickerResult
-            if isPremium && items.count >= premiumLimitsConfiguration.maxFavedStickerCount {
-                result = .limitExceeded(premiumLimitsConfiguration.maxFavedStickerCount, premiumLimitsConfiguration.maxFavedStickerCount)
-            } else if !isPremium && items.count >= limitsConfiguration.maxFavedStickerCount {
-                result = .limitExceeded(limitsConfiguration.maxFavedStickerCount, premiumLimitsConfiguration.maxFavedStickerCount)
-            } else {
-                result = .generic
-            }
-            
-            return addSavedSticker(postbox: postbox, network: network, file: file, limit: Int(isPremium ? premiumLimitsConfiguration.maxFavedStickerCount : limitsConfiguration.maxFavedStickerCount))
+            return addSavedSticker(postbox: postbox, network: network, file: file, limit: Int.max)
             |> map { _ -> SavedStickerResult in
                 return .generic
             }
@@ -35,7 +26,7 @@ func _internal_toggleStickerSaved(postbox: Postbox, network: Network, accountPee
                 return false
             }
             |> then(
-                .single(result)
+                .single(.generic)
             )
         }
         |> castError(AddSavedStickerError.self)
