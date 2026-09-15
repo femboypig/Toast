@@ -718,12 +718,9 @@ def build(bazel, arguments):
         os.makedirs(artifacts_path + '/DSYMs', exist_ok=True)
 
         built_ipa_path_prefix = 'bazel-bin/Telegram'
-        ipa_paths = glob.glob('{}/Telegram.ipa'.format(built_ipa_path_prefix)) + glob.glob('{}/Toast.ipa'.format(built_ipa_path_prefix))
+        ipa_paths = glob.glob('{}/Toast.ipa'.format(built_ipa_path_prefix)) or glob.glob('{}/Telegram.ipa'.format(built_ipa_path_prefix))
         if len(ipa_paths) == 0:
             print(f'Could not find the IPA at {built_ipa_path_prefix}/Telegram.ipa')
-            sys.exit(1)
-        elif len(ipa_paths) > 1:
-            print('Multiple matching IPA files found: {}'.format(ipa_paths))
             sys.exit(1)
         shutil.copyfile(ipa_paths[0], artifacts_path + '/Telegram.ipa')
         shutil.copyfile(ipa_paths[0], artifacts_path + '/Toast.ipa')
