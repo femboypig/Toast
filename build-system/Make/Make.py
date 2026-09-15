@@ -701,19 +701,24 @@ def build(bazel, arguments):
 
     bazel_command_line.set_split_swiftmodules(arguments.enableParallelSwiftmoduleGeneration)
 
+    if hasattr(arguments, 'disableProvisioningProfiles') and arguments.disableProvisioningProfiles:
+        bazel_command_line.set_disable_provisioning_profiles()
+
     bazel_command_line.invoke_build()
 
     if arguments.outputBuildArtifactsPath is not None:
         artifacts_path = os.path.abspath(arguments.outputBuildArtifactsPath)
         if os.path.exists(artifacts_path + '/Telegram.ipa'):
             os.remove(artifacts_path + '/Telegram.ipa')
+        if os.path.exists(artifacts_path + '/Toast.ipa'):
+            os.remove(artifacts_path + '/Toast.ipa')
         if os.path.exists(artifacts_path + '/DSYMs'):
             shutil.rmtree(artifacts_path + '/DSYMs')
         os.makedirs(artifacts_path, exist_ok=True)
         os.makedirs(artifacts_path + '/DSYMs', exist_ok=True)
 
         built_ipa_path_prefix = 'bazel-bin/Telegram'
-        ipa_paths = glob.glob('{}/Telegram.ipa'.format(built_ipa_path_prefix))
+        ipa_paths = glob.glob('{}/Telegram.ipa'.format(built_ipa_path_prefix)) + glob.glob('{}/Toast.ipa'.format(built_ipa_path_prefix))
         if len(ipa_paths) == 0:
             print(f'Could not find the IPA at {built_ipa_path_prefix}/Telegram.ipa')
             sys.exit(1)
@@ -721,6 +726,7 @@ def build(bazel, arguments):
             print('Multiple matching IPA files found: {}'.format(ipa_paths))
             sys.exit(1)
         shutil.copyfile(ipa_paths[0], artifacts_path + '/Telegram.ipa')
+        shutil.copyfile(ipa_paths[0], artifacts_path + '/Toast.ipa')
 
         dsym_paths = glob.glob('bazel-bin/Telegram/*.dSYM')
         for dsym_path in dsym_paths:
@@ -1038,6 +1044,12 @@ if __name__ == '__main__':
         metavar='number'
     )
     add_project_and_build_common_arguments(buildParser)
+    buildParser.add_argument(
+        '--disableProvisioningProfiles',
+        action='store_true',
+        default=False,
+        help='Build without provisioning profiles (unsigned).'
+    )
     buildParser.add_argument(
         '--configuration',
         choices=[
