@@ -332,7 +332,7 @@ alternate_icon_folders = [
     "ToastSlice",
 ]
 
-composer_icon_folders = ["Telegram"]
+composer_icon_folders = []
 
 [
     filegroup(
@@ -1784,7 +1784,7 @@ ios_application(
     ],
     resources = [
         ":LaunchScreen",
-        #":DefaultAppIcon",
+        ":DefaultAppIcon",
     ],
     frameworks = [
         ":MtProtoKitFramework",
