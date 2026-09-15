@@ -1,109 +1,128 @@
-name: CI
+name: Build Toast iOS (Unsigned)
 
 on:
-  push:
-    branches: [ master ]
-
   workflow_dispatch:
+    inputs:
+      configuration:
+        description: 'Build Configuration'
+        required: true
+        default: 'release_arm64'
+        type: choice
+        options:
+          - release_arm64
+          - debug_arm64
+          - release_sim_arm64
+          - debug_sim_arm64
+      os:
+        description: 'macOS Runner'
+        required: true
+        default: 'macos-15'
+        type: choice
+        options:
+          - macos-15
+          - macos-14
+      create_release:
+        description: 'Create a GitHub Release with the IPA'
+        required: false
+        default: false
+        type: boolean
 
 jobs:
   build:
-    runs-on: macos-13
+    name: Build Toast (${{ inputs.configuration }})
+    runs-on: ${{ inputs.os }}
 
     steps:
-      - uses: actions/checkout@v2
+      - name: Checkout repository
+        uses: actions/checkout@v4
         with:
           submodules: 'recursive'
           fetch-depth: '0'
 
-      - name: Set active Xcode path
+      - name: Set active Xcode
         run: |
-          XCODE_VERSION=$(cat versions.json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["xcode"]);')
-          sudo xcode-select -s /Applications/Xcode_$XCODE_VERSION.app/Contents/Developer
+          sudo xcode-select -s /Applications/Xcode.app
+          xcodebuild -version
 
       - name: Create canonical source directory
         run: |
           set -x
           sudo mkdir -p /Users/Shared
-          cp -R $GITHUB_WORKSPACE /Users/Shared/
-          mv /Users/Shared/$(basename $GITHUB_WORKSPACE) /Users/Shared/telegram-ios
+          cp -R "$GITHUB_WORKSPACE" /Users/Shared/
+          mv "/Users/Shared/$(basename "$GITHUB_WORKSPACE")" /Users/Shared/telegram-ios
 
-      - name: Build the App
+      - name: Build Toast App
         run: |
           set -x
-
-          # source code paths are included in the final binary, so we need to make them stable across builds
           SOURCE_DIR=/Users/Shared/telegram-ios
-
-          # use canonical bazel root
           BAZEL_USER_ROOT="/private/var/tmp/_bazel_containerhost"
 
-          cd $SOURCE_DIR
+          cd "$SOURCE_DIR"
 
-          BUILD_NUMBER_OFFSET="$(cat build_number_offset)"
+          BUILD_NUMBER_OFFSET="$(cat build_number_offset 2>/dev/null || echo 0)"
+          APP_VERSION=$(python3 -c 'import json; f=open("versions.json"); print(json.load(f)["app"])')
+          COMMIT_COUNT=$(git rev-list --count HEAD 2>/dev/null || echo 1000)
+          BUILD_NUMBER="$((COMMIT_COUNT + BUILD_NUMBER_OFFSET))"
 
-          export APP_VERSION=$(cat versions.json | python3 -c 'import json,sys;obj=json.load(sys.stdin);print(obj["app"]);')
-          export COMMIT_COUNT=$(git rev-list --count HEAD)
-          export COMMIT_COUNT="$(($COMMIT_COUNT+$BUILD_NUMBER_OFFSET))"
-          export BUILD_NUMBER="$COMMIT_COUNT"
-          echo "BUILD_NUMBER=$(echo $BUILD_NUMBER)" >> $GITHUB_ENV
-          echo "APP_VERSION=$(echo $APP_VERSION)" >> $GITHUB_ENV
+          echo "BUILD_NUMBER=$BUILD_NUMBER" >> "$GITHUB_ENV"
+          echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_ENV"
 
+          # Import fake certificates into temporary keychain
           python3 build-system/Make/ImportCertificates.py --path build-system/fake-codesigning/certs
+
+          # Build unsigned IPA using Bazel & Make.py
           python3 -u build-system/Make/Make.py \
             --bazelUserRoot="$BAZEL_USER_ROOT" \
+            --overrideXcodeVersion \
+            --overrideBazelVersion \
             build \
-            --configurationPath="build-system/appstore-configuration.json" \
+            --configurationPath="build-system/toast-configuration.json" \
             --codesigningInformationPath=build-system/fake-codesigning \
-            --configuration=release_arm64 \
-            --buildNumber="$BUILD_NUMBER"
+            --disableProvisioningProfiles \
+            --configuration="${{ inputs.configuration }}" \
+            --buildNumber="$BUILD_NUMBER" \
+            --outputBuildArtifactsPath="$SOURCE_DIR/build/artifacts"
 
-          # collect ipa
-          OUTPUT_PATH="build/artifacts"
-          rm -rf "$OUTPUT_PATH"
+          OUTPUT_PATH="$SOURCE_DIR/build/artifacts"
           mkdir -p "$OUTPUT_PATH"
-          for f in bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/Telegram.ipa; do
-            cp "$f" $OUTPUT_PATH/
-          done
 
-          # collect dsym
-          mkdir -p build/DSYMs
-          for f in bazel-out/applebin_ios-ios_arm*-opt-ST-*/bin/Telegram/*.dSYM; do
-            cp -R "$f" build/DSYMs/
+          # Fallback check if IPA was generated directly in bazel-out / bazel-bin
+          if [ ! -f "$OUTPUT_PATH/Toast.ipa" ]; then
+            for f in $(find bazel-out bazel-bin -name "Telegram.ipa" -o -name "Toast.ipa" 2>/dev/null); do
+              cp "$f" "$OUTPUT_PATH/Toast.ipa"
+              break
+            done
+          fi
+
+          # Collect DSYMs
+          mkdir -p "$SOURCE_DIR/build/DSYMs"
+          for f in $(find bazel-out bazel-bin -name "*.dSYM" 2>/dev/null); do
+            cp -R "$f" "$SOURCE_DIR/build/DSYMs/"
           done
-          zip -r "./$OUTPUT_PATH/Telegram.DSYMs.zip" build/DSYMs 1>/dev/null
+          if [ -d "$SOURCE_DIR/build/DSYMs" ] && [ "$(ls -A "$SOURCE_DIR/build/DSYMs")" ]; then
+            zip -rq "$OUTPUT_PATH/Toast.DSYMs.zip" "$SOURCE_DIR/build/DSYMs"
+          fi
+
+      - name: Upload Toast IPA & DSYM
+        uses: actions/upload-artifact@v4
+        with:
+          name: Toast-${{ inputs.configuration }}-${{ env.BUILD_NUMBER }}
+          path: |
+            /Users/Shared/telegram-ios/build/artifacts/Toast.ipa
+            /Users/Shared/telegram-ios/build/artifacts/Toast.DSYMs.zip
+          if-no-files-found: error
+          retention-days: 14
 
       - name: Create Release
-        id: create_release
-        uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        if: ${{ inputs.create_release }}
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: build-${{ env.BUILD_NUMBER }}
-          release_name: Telegram ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})
+          name: Toast ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})
           body: |
-            An unsigned build of Telegram for iOS ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})
+            Unsigned build of Toast iOS ${{ env.APP_VERSION }} (${{ env.BUILD_NUMBER }})
+          files: |
+            /Users/Shared/telegram-ios/build/artifacts/Toast.ipa
+            /Users/Shared/telegram-ios/build/artifacts/Toast.DSYMs.zip
           draft: false
           prerelease: false
-
-      - name: Upload Release IPA
-        id: upload-release-ipa 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /Users/Shared/telegram-ios/build/artifacts/Telegram.ipa
-          asset_name: Telegram.ipa
-          asset_content_type: application/zip
-
-      - name: Upload Release DSYM
-        id: upload-release-dsym 
-        uses: actions/upload-release-asset@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
-          asset_path: /Users/Shared/telegram-ios/build/artifacts/Telegram.DSYMs.zip
-          asset_name: Telegram.DSYMs.zip
-          asset_content_type: application/zip
