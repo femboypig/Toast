@@ -16,9 +16,10 @@ on:
       os:
         description: 'macOS Runner'
         required: true
-        default: 'macos-15'
+        default: 'macos-26'
         type: choice
         options:
+          - macos-26
           - macos-15
           - macos-14
       create_release:
@@ -41,7 +42,12 @@ jobs:
 
       - name: Set active Xcode
         run: |
-          sudo xcode-select -s /Applications/Xcode.app
+          for app in /Applications/Xcode_26*.app /Applications/Xcode.app; do
+            if [ -d "$app" ]; then
+              sudo xcode-select -s "$app"
+              break
+            fi
+          done
           xcodebuild -version
 
       - name: Create canonical source directory
