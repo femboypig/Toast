@@ -506,8 +506,37 @@ final class AuthorizedApplicationContext {
                                         (strongSelf.rootController.viewControllers.last as? ViewController)?.present(chatController, in: .window(.root), with: ChatControllerOverlayPresentationData(expandData: expandData()))
                                     }
                                 }))
+                    }
+                } else {
+                    if notify, let peer = firstMessage.peers[firstMessage.id.peerId] {
+                        let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
+                        let authorTitle = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        let bodyText: String
+                        if !firstMessage.text.isEmpty {
+                            bodyText = firstMessage.text
+                        } else if !firstMessage.media.isEmpty {
+                            if firstMessage.media.first is TelegramMediaImage {
+                                bodyText = "Photo"
+                            } else if let file = firstMessage.media.first as? TelegramMediaFile {
+                                if file.isVoice {
+                                    bodyText = "Voice Message"
+                                } else if file.isVideo {
+                                    bodyText = "Video"
+                                } else {
+                                    bodyText = file.fileName ?? "File"
+                                }
+                            } else {
+                                bodyText = "New message"
                             }
-                        })
+                        } else {
+                            bodyText = "New message"
+                        }
+                        ToastBackgroundKeepAlive.shared.postLocalNotification(
+                            title: authorTitle,
+                            body: bodyText,
+                            peerId: firstMessage.id.peerId.toInt64(),
+                            messageId: firstMessage.id.id
+                        )
                     }
                 }
             }
