@@ -864,8 +864,9 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
             displayInfo = false
         }
         var canFullscreen = false
-        var canDelete: Bool
-        var canShare = !message.containsSecretMedia && !Namespaces.Message.allNonRegular.contains(message.id.namespace) && message.adAttribute == nil
+        let allowSavingSecret = UserDefaults.standard.bool(forKey: "Toast_saveDisappearingMedia")
+        let allowSavingProtected = UserDefaults.standard.bool(forKey: "Toast_allowSavingProtectedContent")
+        var canShare = (!message.containsSecretMedia || allowSavingSecret) && !Namespaces.Message.allNonRegular.contains(message.id.namespace) && message.adAttribute == nil
                 
         var canEdit = false
         var isImage = false
@@ -910,7 +911,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
             }
         }
         
-        canEdit = canEdit && !message.containsSecretMedia
+        canEdit = canEdit && (!message.containsSecretMedia || allowSavingSecret)
         if let peer = message.peers[message.id.peerId] {
             if peer is TelegramUser || peer is TelegramSecretChat {
                 canDelete = true
@@ -945,7 +946,7 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
             canEdit = false
         }
         
-        if message.isCopyProtected() || peerIsCopyProtected || message.paidContent != nil {
+        if ((message.isCopyProtected() || peerIsCopyProtected) && !allowSavingProtected) || message.paidContent != nil {
             canShare = false
             canEdit = false
         }
