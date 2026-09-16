@@ -53,14 +53,16 @@ private func screenRecordingActive() -> Signal<Bool, NoError> {
 public func screenCaptureEvents() -> Signal<ScreenCaptureEvent, NoError> {
     return Signal { subscriber in
         let observer = NotificationCenter.default.addObserver(forName: UIApplication.userDidTakeScreenshotNotification, object: nil, queue: .main, using: { _ in
-            subscriber.putNext(.still)
+            if !UserDefaults.standard.bool(forKey: "Toast_allowScreenshots") {
+                subscriber.putNext(.still)
+            }
         })
         
         var previous = false
         let screenRecordingDisposable = screenRecordingActive().start(next: { value in
             if value != previous {
                 previous = value
-                if value {
+                if value && !UserDefaults.standard.bool(forKey: "Toast_allowScreenshots") {
                     subscriber.putNext(.video)
                 }
             }
@@ -88,7 +90,9 @@ public final class ScreenCaptureDetectionManager {
             guard let _ = self else {
                 return
             }
-            let _ = check()
+            if !UserDefaults.standard.bool(forKey: "Toast_allowScreenshots") {
+                let _ = check()
+            }
         })
         
         self.screenRecordingDisposable = screenRecordingActive().start(next: { [weak self] value in
