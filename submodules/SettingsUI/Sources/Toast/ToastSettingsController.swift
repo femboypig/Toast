@@ -7,6 +7,7 @@ import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
 import AccountContext
+import AlertUI
 
 private final class ToastSettingsControllerArguments {
     let context: AccountContext
@@ -277,7 +278,7 @@ public func toastSettingsController(context: AccountContext) -> ViewController {
             ToastSettings.shared.localNotificationsEnabled = value
         },
         openAppearance: {
-            pushControllerImpl?(context.sharedContext.makeThemeSettingsController(context: context))
+            pushControllerImpl?(themeSettingsController(context: context))
         },
         resetDefaults: {
             let presentationData = context.sharedContext.currentPresentationData.with { $0 }
