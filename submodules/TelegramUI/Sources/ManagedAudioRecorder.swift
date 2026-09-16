@@ -10,6 +10,7 @@ import OpusBinding
 import ChatPresentationInterfaceState
 import AudioWaveform
 import FFMpegBinding
+import SettingsUI
 
 private let kOutputBus: UInt32 = 0
 private let kInputBus: UInt32 = 1
