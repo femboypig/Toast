@@ -329,8 +329,9 @@ alternate_icon_folders = [
     "Premium",
     "PremiumBlack",
     "PremiumTurbo",
+    "Toast",
     "ToastSlice",
-    "Toaster",
+    "ToastFemboy",
 ]
 
 composer_icon_folders = ["Telegram"]
