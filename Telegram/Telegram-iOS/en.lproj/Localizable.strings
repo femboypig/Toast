@@ -4567,7 +4567,7 @@ Sorry for the inconvenience.";
 "Channel.AddBotErrorNoRights" = "Sorry, bots can only be added to channels as administrators.";
 
 "Appearance.AppIcon" = "App Icon";
-"Appearance.AppIconDefault" = "Toast";
+"Appearance.AppIconDefault" = "Default";
 "Appearance.AppIconDefaultX" = "Default X";
 "Appearance.AppIconClassic" = "Classic";
 "Appearance.AppIconClassicX" = "Classic X";
