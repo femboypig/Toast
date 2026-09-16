@@ -506,6 +506,8 @@ final class AuthorizedApplicationContext {
                                         (strongSelf.rootController.viewControllers.last as? ViewController)?.present(chatController, in: .window(.root), with: ChatControllerOverlayPresentationData(expandData: expandData()))
                                     }
                                 }))
+                            }
+                        })
                     }
                 } else {
                     if notify, let peer = firstMessage.peers[firstMessage.id.peerId] {
