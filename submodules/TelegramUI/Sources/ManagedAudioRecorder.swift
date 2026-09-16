@@ -434,6 +434,7 @@ final class ManagedAudioRecorderContext {
         assert(self.queue.isCurrent())
         
         self.paused = false
+        ToastVoiceChanger.shared.reset()
     
         if self.audioSessionDisposable == nil {
             let queue = self.queue
@@ -621,7 +622,13 @@ final class ManagedAudioRecorderContext {
                 self.audioBuffer.append(currentEncoderPacket.assumingMemoryBound(to: UInt8.self), count: currentEncoderPacketSize)
                 break
             } else {
-                self.processWaveformPreview(samples: currentEncoderPacket.assumingMemoryBound(to: Int16.self), count: currentEncoderPacketSize / 2)
+                let sampleCount = currentEncoderPacketSize / 2
+                let samples = currentEncoderPacket.assumingMemoryBound(to: Int16.self)
+                let voiceMode = ToastSettings.shared.voiceChangerMode
+                if voiceMode != .off {
+                    ToastVoiceChanger.shared.process(samples: samples, count: sampleCount, mode: voiceMode)
+                }
+                self.processWaveformPreview(samples: samples, count: sampleCount)
                 
                 self.oggWriter.writeFrame(currentEncoderPacket.assumingMemoryBound(to: UInt8.self), frameByteCount: UInt(currentEncoderPacketSize))
                 
