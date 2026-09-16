@@ -32,6 +32,8 @@ jobs:
   build:
     name: Build Toast (${{ inputs.configuration }})
     runs-on: ${{ inputs.os }}
+    permissions:
+      contents: write
 
     steps:
       - name: Checkout repository
