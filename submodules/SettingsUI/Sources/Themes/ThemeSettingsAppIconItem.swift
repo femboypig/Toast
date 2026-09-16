@@ -377,7 +377,11 @@ class ThemeSettingsAppIconItemNode: ListViewItemNode, ItemListItemNode {
                             var bordered = true
                             switch icon.name {
                                 case "BlueIcon":
-                                    name = item.strings.Appearance_AppIconDefault
+                                    name = "Toast"
+                                case "ToastSlice":
+                                    name = "Toast Slice"
+                                case "Toaster":
+                                    name = "Toaster"
                                 case "BlackIcon":
                                     name = item.strings.Appearance_AppIconDefaultX
                                 case "BlueClassicIcon":
