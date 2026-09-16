@@ -112,6 +112,17 @@
         <key>UIPrerenderedIcon</key>
         <true/>
     </dict>
+    <key>Toast</key>
+    <dict>
+        <key>CFBundleIconFiles</key>
+        <array>
+            <string>Toast-76</string>
+            <string>Toast-76@2x</string>
+            <string>Toast-83.5@2x</string>
+        </array>
+        <key>UIPrerenderedIcon</key>
+        <true/>
+    </dict>
     <key>ToastSlice</key>
     <dict>
         <key>CFBundleIconFiles</key>
@@ -123,13 +134,13 @@
         <key>UIPrerenderedIcon</key>
         <true/>
     </dict>
-    <key>Toaster</key>
+    <key>ToastFemboy</key>
     <dict>
         <key>CFBundleIconFiles</key>
         <array>
-            <string>Toaster-76</string>
-            <string>Toaster-76@2x</string>
-            <string>Toaster-83.5@2x</string>
+            <string>ToastFemboy-76</string>
+            <string>ToastFemboy-76@2x</string>
+            <string>ToastFemboy-83.5@2x</string>
         </array>
         <key>UIPrerenderedIcon</key>
         <true/>
