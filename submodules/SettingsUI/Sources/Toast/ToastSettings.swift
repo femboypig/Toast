@@ -36,9 +36,9 @@ public final class ToastSettings {
     private let backgroundKeepAliveKey = "Toast_backgroundKeepAlive"
     private let localNotificationsEnabledKey = "Toast_localNotificationsEnabled"
 
-    private let updatedPromise = ValuePromise<Void>(Void(), ignoreRepeated: false)
+    private let updatedPromise = ValuePromise<Bool>(true, ignoreRepeated: false)
     public var updated: Signal<Void, NoError> {
-        return self.updatedPromise.get()
+        return self.updatedPromise.get() |> map { _ in return () }
     }
 
     private init() {
@@ -56,7 +56,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.saveDisappearingMediaKey)
-            self.updatedPromise.set(Void())
+            self.updatedPromise.set(true)
         }
     }
 
@@ -66,7 +66,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.allowScreenshotsKey)
-            self.updatedPromise.set(Void())
+            self.updatedPromise.set(true)
         }
     }
 
@@ -76,7 +76,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.allowSavingProtectedContentKey)
-            self.updatedPromise.set(Void())
+            self.updatedPromise.set(true)
         }
     }
 
@@ -90,7 +90,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue.rawValue, forKey: self.voiceChangerModeKey)
-            self.updatedPromise.set(Void())
+            self.updatedPromise.set(true)
         }
     }
 
@@ -100,7 +100,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.backgroundKeepAliveKey)
-            self.updatedPromise.set(Void())
+            self.updatedPromise.set(true)
         }
     }
 
@@ -110,7 +110,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.localNotificationsEnabledKey)
-            self.updatedPromise.set(Void())
+            self.updatedPromise.set(true)
         }
     }
 
@@ -121,6 +121,6 @@ public final class ToastSettings {
         self.voiceChangerMode = .off
         self.backgroundKeepAlive = true
         self.localNotificationsEnabled = true
-        self.updatedPromise.set(Void())
+        self.updatedPromise.set(true)
     }
 }
