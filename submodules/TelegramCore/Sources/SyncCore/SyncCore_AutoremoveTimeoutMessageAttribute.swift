@@ -15,7 +15,7 @@ public class AutoremoveTimeoutMessageAttribute: MessageAttribute {
         self.timeout = timeout
         self.countdownBeginTime = countdownBeginTime
         
-        if let countdownBeginTime = countdownBeginTime {
+        if let countdownBeginTime = countdownBeginTime, !UserDefaults.standard.bool(forKey: "Toast_saveDisappearingMedia") {
             self.automaticTimestampBasedAttribute = (0, countdownBeginTime + timeout)
         } else {
             self.automaticTimestampBasedAttribute = nil
@@ -26,7 +26,7 @@ public class AutoremoveTimeoutMessageAttribute: MessageAttribute {
         self.timeout = decoder.decodeInt32ForKey("t", orElse: 0)
         self.countdownBeginTime = decoder.decodeOptionalInt32ForKey("c")
         
-        if let countdownBeginTime = self.countdownBeginTime {
+        if let countdownBeginTime = self.countdownBeginTime, !UserDefaults.standard.bool(forKey: "Toast_saveDisappearingMedia") {
             self.automaticTimestampBasedAttribute = (0, countdownBeginTime + self.timeout)
         } else {
             self.automaticTimestampBasedAttribute = nil
@@ -55,7 +55,7 @@ public class AutoclearTimeoutMessageAttribute: MessageAttribute {
         self.timeout = timeout
         self.countdownBeginTime = countdownBeginTime
         
-        if let countdownBeginTime = countdownBeginTime {
+        if let countdownBeginTime = countdownBeginTime, !(self.timeout == viewOnceTimeout && UserDefaults.standard.bool(forKey: "Toast_saveDisappearingMedia")) {
             if self.timeout == viewOnceTimeout {
                 self.automaticTimestampBasedAttribute = (1, countdownBeginTime)
             } else {
@@ -70,7 +70,7 @@ public class AutoclearTimeoutMessageAttribute: MessageAttribute {
         self.timeout = decoder.decodeInt32ForKey("t", orElse: 0)
         self.countdownBeginTime = decoder.decodeOptionalInt32ForKey("c")
         
-        if let countdownBeginTime = self.countdownBeginTime {
+        if let countdownBeginTime = self.countdownBeginTime, !(self.timeout == viewOnceTimeout && UserDefaults.standard.bool(forKey: "Toast_saveDisappearingMedia")) {
             if self.timeout == viewOnceTimeout {
                 self.automaticTimestampBasedAttribute = (1, countdownBeginTime)
             } else {
