@@ -150,6 +150,9 @@ func settingsItems(data: PeerInfoScreenData?, context: AccountContext, presentat
         items[.myProfile]!.append(PeerInfoScreenDisclosureItem(id: 0, text: presentationData.strings.Settings_MyProfile, icon: PresentationResourcesSettings.myProfile, action: {
             interaction.openSettings(.profile)
         }))
+        items[.myProfile]!.append(PeerInfoScreenDisclosureItem(id: 1, text: "Toast", icon: PresentationResourcesSettings.toast, action: {
+            interaction.openSettings(.toast)
+        }))
         
         if !settings.proxySettings.servers.isEmpty {
             let proxyType: String
