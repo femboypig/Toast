@@ -625,9 +625,8 @@ final class ManagedAudioRecorderContext {
             } else {
                 let sampleCount = currentEncoderPacketSize / 2
                 let samples = currentEncoderPacket.assumingMemoryBound(to: Int16.self)
-                let voiceMode = ToastSettings.shared.voiceChangerMode
-                if voiceMode != .off {
-                    ToastVoiceChanger.shared.process(samples: samples, count: sampleCount, mode: voiceMode)
+                if ToastSettings.shared.voiceChangerEnabled {
+                    ToastVoiceChanger.shared.process(samples: samples, count: sampleCount)
                 }
                 self.processWaveformPreview(samples: samples, count: sampleCount)
                 
