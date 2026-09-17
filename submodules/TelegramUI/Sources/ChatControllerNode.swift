@@ -5185,8 +5185,10 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
             
             if !messages.isEmpty || postEmptyMessages || self.chatPresentationInterfaceState.interfaceState.forwardMessageIds != nil {
                 if let forwardMessageIds = self.chatPresentationInterfaceState.interfaceState.forwardMessageIds {
+                    let forwardWithoutQuote = UserDefaults.standard.object(forKey: "Toast_forwardWithoutQuote") as? Bool ?? false
+                    let hideNames = (self.chatPresentationInterfaceState.interfaceState.forwardOptionsState?.hideNames == true) || forwardWithoutQuote
                     var attributes: [MessageAttribute] = []
-                    attributes.append(ForwardOptionsMessageAttribute(hideNames: self.chatPresentationInterfaceState.interfaceState.forwardOptionsState?.hideNames == true, hideCaptions: self.chatPresentationInterfaceState.interfaceState.forwardOptionsState?.hideCaptions == true))
+                    attributes.append(ForwardOptionsMessageAttribute(hideNames: hideNames, hideCaptions: self.chatPresentationInterfaceState.interfaceState.forwardOptionsState?.hideCaptions == true))
 
                     var replyThreadId: Int64?
                     if case let .replyThread(replyThreadMessage) = self.chatPresentationInterfaceState.chatLocation {
