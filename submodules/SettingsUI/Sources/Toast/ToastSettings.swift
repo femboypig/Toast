@@ -79,6 +79,9 @@ public final class ToastSettings {
     private let backgroundKeepAliveKey = "Toast_backgroundKeepAlive"
     private let localNotificationsEnabledKey = "Toast_localNotificationsEnabled"
     private let bypassLevelKey = "Toast_bypassLevel"
+    private let showAvatarsInDirectChatsKey = "Toast_showAvatarsInDirectChats"
+    private let blockChannelAdsKey = "Toast_blockChannelAds"
+    private let sendOriginalMediaKey = "Toast_sendOriginalMedia"
 
     private let updatedPromise = ValuePromise<Bool>(true, ignoreRepeated: false)
     public var updated: Signal<Void, NoError> {
@@ -99,7 +102,10 @@ public final class ToastSettings {
             self.voiceChangerDistortionKey: Float(0.0),
             self.backgroundKeepAliveKey: true,
             self.localNotificationsEnabledKey: true,
-            self.bypassLevelKey: ToastBypassLevel.max.rawValue
+            self.bypassLevelKey: ToastBypassLevel.max.rawValue,
+            self.showAvatarsInDirectChatsKey: true,
+            self.blockChannelAdsKey: true,
+            self.sendOriginalMediaKey: false
         ])
     }
 
@@ -256,6 +262,36 @@ public final class ToastSettings {
         }
     }
 
+    public var showAvatarsInDirectChats: Bool {
+        get {
+            return self.defaults.object(forKey: self.showAvatarsInDirectChatsKey) as? Bool ?? true
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.showAvatarsInDirectChatsKey)
+            self.updatedPromise.set(true)
+        }
+    }
+
+    public var blockChannelAds: Bool {
+        get {
+            return self.defaults.object(forKey: self.blockChannelAdsKey) as? Bool ?? true
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.blockChannelAdsKey)
+            self.updatedPromise.set(true)
+        }
+    }
+
+    public var sendOriginalMedia: Bool {
+        get {
+            return self.defaults.object(forKey: self.sendOriginalMediaKey) as? Bool ?? false
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.sendOriginalMediaKey)
+            self.updatedPromise.set(true)
+        }
+    }
+
     public func resetToDefaults() {
         self.saveDisappearingMedia = true
         self.allowScreenshots = true
@@ -271,6 +307,9 @@ public final class ToastSettings {
         self.backgroundKeepAlive = true
         self.localNotificationsEnabled = true
         self.bypassLevel = .max
+        self.showAvatarsInDirectChats = true
+        self.blockChannelAds = true
+        self.sendOriginalMedia = false
         self.updatedPromise.set(true)
     }
 }
