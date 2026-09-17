@@ -355,6 +355,9 @@ public final class ChatMessageItemImpl: ChatMessageItem, CustomStringConvertible
                     }
                 }
                 let showAvatarsInDirect = UserDefaults.standard.object(forKey: "Toast_showAvatarsInDirectChats") as? Bool ?? true
+                if effectiveAuthor == nil && showAvatarsInDirect {
+                    effectiveAuthor = content.firstMessage.peers[content.firstMessage.id.peerId]
+                }
                 displayAuthorInfo = incoming && (peerId.isGroupOrChannel || showAvatarsInDirect) && effectiveAuthor != nil
                 
                 if let _ = content.firstMessage.guestChatAttribute {
