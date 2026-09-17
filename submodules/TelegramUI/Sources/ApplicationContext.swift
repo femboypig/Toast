@@ -516,23 +516,28 @@ final class AuthorizedApplicationContext {
                             continue
                         }
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        var title: String?
-                        if let chatPeer = messageMainPeer(EngineMessage(firstMessage)) {
-                            if case let .channel(channel) = chatPeer, case .broadcast = channel.info {
-                                title = chatPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                            } else if let author = firstMessage.author {
-                                let authorString = EnginePeer(author).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                if author.id != chatPeer.id {
-                                    title = "\(authorString)@\(chatPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))"
-                                } else {
-                                    title = chatPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                                }
+                        let chatPeer = messageMainPeer(EngineMessage(firstMessage)) ?? EnginePeer(peer)
+                        let chatTitle = chatPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+
+                        var isGroup = false
+                        var senderTitle = chatTitle
+                        var resolvedTitle = chatTitle
+
+                        if case let .channel(channel) = chatPeer, case .broadcast = channel.info {
+                            isGroup = false
+                            resolvedTitle = chatTitle
+                            senderTitle = chatTitle
+                        } else if let author = firstMessage.author {
+                            let authorTitle = EnginePeer(author).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                            senderTitle = authorTitle
+                            if author.id != chatPeer.id {
+                                isGroup = true
+                                resolvedTitle = chatTitle
                             } else {
-                                title = chatPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                resolvedTitle = authorTitle
                             }
                         }
-                        let resolvedTitle = title ?? EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                        
+
                         let (textString, _, _) = descriptionStringForMessage(
                             contentSettings: strongSelf.context.currentContentSettings.with { $0 },
                             message: EngineMessage(firstMessage),
@@ -541,13 +546,31 @@ final class AuthorizedApplicationContext {
                             dateTimeFormat: presentationData.dateTimeFormat,
                             accountPeerId: strongSelf.context.account.peerId
                         )
-                        let bodyText = textString.string.isEmpty ? "New message" : textString.string
-                        
+                        let rawBodyText = textString.string.isEmpty ? "New message" : textString.string
+                        let bodyText: String
+                        if isGroup {
+                            bodyText = "\(senderTitle): \(rawBodyText)"
+                        } else {
+                            bodyText = rawBodyText
+                        }
+
+                        var avatarData: Data?
+                        let avatarPeer = firstMessage.author ?? chatPeer._asPeer()
+                        if let smallProfileImage = avatarPeer.smallProfileImage {
+                            if let path = strongSelf.context.account.postbox.mediaBox.completedResourcePath(smallProfileImage.resource),
+                               let data = try? Data(contentsOf: URL(fileURLWithPath: path)) {
+                                avatarData = data
+                            }
+                        }
+
                         ToastBackgroundKeepAlive.shared.postLocalNotification(
                             title: resolvedTitle,
                             body: bodyText,
                             peerId: firstMessage.id.peerId.toInt64(),
-                            messageId: firstMessage.id.id
+                            messageId: firstMessage.id.id,
+                            senderTitle: senderTitle,
+                            isGroup: isGroup,
+                            avatarData: avatarData
                         )
                     }
                 }
