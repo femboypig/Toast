@@ -12,6 +12,9 @@ import SaveToCameraRoll
 import Photos
 
 public func defaultVideoPresetForContext(_ context: AccountContext) -> TGMediaVideoConversionPreset {
+    if UserDefaults.standard.object(forKey: "Toast_sendOriginalMedia") as? Bool ?? false {
+        return TGMediaVideoConversionPresetCompressedVeryHigh
+    }
     var networkType: NetworkType = .wifi
     let _ = (context.account.networkType
     |> take(1)).start(next: { value in
