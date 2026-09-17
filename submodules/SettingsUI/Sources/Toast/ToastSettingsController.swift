@@ -22,6 +22,7 @@ private final class ToastSettingsControllerArguments {
     let updateVoiceChangerBass: (Float) -> Void
     let updateVoiceChangerDistortion: (Float) -> Void
     let resetVoiceEffects: () -> Void
+    let openBypassLevelPicker: () -> Void
     let toggleBackgroundKeepAlive: (Bool) -> Void
     let toggleLocalNotifications: (Bool) -> Void
     let openAppearance: () -> Void
@@ -40,6 +41,7 @@ private final class ToastSettingsControllerArguments {
         updateVoiceChangerBass: @escaping (Float) -> Void,
         updateVoiceChangerDistortion: @escaping (Float) -> Void,
         resetVoiceEffects: @escaping () -> Void,
+        openBypassLevelPicker: @escaping () -> Void,
         toggleBackgroundKeepAlive: @escaping (Bool) -> Void,
         toggleLocalNotifications: @escaping (Bool) -> Void,
         openAppearance: @escaping () -> Void,
@@ -57,6 +59,7 @@ private final class ToastSettingsControllerArguments {
         self.updateVoiceChangerBass = updateVoiceChangerBass
         self.updateVoiceChangerDistortion = updateVoiceChangerDistortion
         self.resetVoiceEffects = resetVoiceEffects
+        self.openBypassLevelPicker = openBypassLevelPicker
         self.toggleBackgroundKeepAlive = toggleBackgroundKeepAlive
         self.toggleLocalNotifications = toggleLocalNotifications
         self.openAppearance = openAppearance
@@ -67,6 +70,7 @@ private final class ToastSettingsControllerArguments {
 private enum ToastSettingsSection: ItemListSectionId {
     case mediaPrivacy
     case voiceChanger
+    case censorship
     case background
     case icons
     case reset
@@ -92,6 +96,10 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
     case voiceChangerReset(String)
     case voiceChangerInfo(String)
 
+    case censorshipHeader(String)
+    case censorshipLevel(String, String)
+    case censorshipInfo(String)
+
     case backgroundHeader(String)
     case backgroundKeepAlive(String, Bool)
     case backgroundKeepAliveInfo(String)
@@ -110,6 +118,8 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
             return ToastSettingsSection.mediaPrivacy.rawValue
         case .voiceChangerHeader, .voiceChangerEnabled, .voiceChangerPitch, .voiceChangerEcho, .voiceChangerReverb, .voiceChangerRobot, .voiceChangerBass, .voiceChangerDistortion, .voiceChangerReset, .voiceChangerInfo:
             return ToastSettingsSection.voiceChanger.rawValue
+        case .censorshipHeader, .censorshipLevel, .censorshipInfo:
+            return ToastSettingsSection.censorship.rawValue
         case .backgroundHeader, .backgroundKeepAlive, .backgroundKeepAliveInfo, .localNotifications, .localNotificationsInfo:
             return ToastSettingsSection.background.rawValue
         case .iconsHeader, .iconsDisclosure, .iconsInfo:
@@ -155,24 +165,30 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
             return 18
         case .voiceChangerInfo:
             return 19
-        case .backgroundHeader:
+        case .censorshipHeader:
             return 20
-        case .backgroundKeepAlive:
+        case .censorshipLevel:
             return 21
-        case .backgroundKeepAliveInfo:
+        case .censorshipInfo:
             return 22
-        case .localNotifications:
-            return 23
-        case .localNotificationsInfo:
-            return 24
-        case .iconsHeader:
+        case .backgroundHeader:
             return 30
-        case .iconsDisclosure:
+        case .backgroundKeepAlive:
             return 31
-        case .iconsInfo:
+        case .backgroundKeepAliveInfo:
             return 32
-        case .reset:
+        case .localNotifications:
+            return 33
+        case .localNotificationsInfo:
+            return 34
+        case .iconsHeader:
             return 40
+        case .iconsDisclosure:
+            return 41
+        case .iconsInfo:
+            return 42
+        case .reset:
+            return 50
         }
     }
 
@@ -295,6 +311,15 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
         case let .voiceChangerInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
 
+        case let .censorshipHeader(text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .censorshipLevel(title, value):
+            return ItemListDisclosureItem(presentationData: presentationData, title: title, label: value, sectionId: self.section, style: .blocks, action: {
+                args.openBypassLevelPicker()
+            })
+        case let .censorshipInfo(text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+
         case let .backgroundHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
         case let .backgroundKeepAlive(title, value):
@@ -383,6 +408,10 @@ private func toastSettingsEntries(settings: ToastSettings) -> [ToastSettingsEntr
     }
     entries.append(.voiceChangerInfo("Transforms your voice in real time with continuous pitch shift, echo delay, multi-tap reverb, cyber modulation, bass boost, and overdrive saturation."))
 
+    entries.append(.censorshipHeader("CENSORSHIP BYPASS / ОБХОД БЛОКИРОВОК"))
+    entries.append(.censorshipLevel("Bypass Level", settings.bypassLevel.title))
+    entries.append(.censorshipInfo("Anti-censorship intensity modes:\n• Disabled: Standard connection without routing\n• Low: Encrypted DNS-over-HTTPS (Cloudflare 1.1.1.1 & Google 8.8.8.8 direct-IP)\n• Medium: DoH + Initial TCP handshake packet splitting (DPI/TSPU evasion)\n• Max: Full bypass — DoH + TCP splitting + Auto-rotating built-in Fake-TLS MTProxy pool with latency health checks"))
+
     entries.append(.backgroundHeader("NOTIFICATIONS & BACKGROUND"))
     entries.append(.backgroundKeepAlive("Keep Connection in Background", settings.backgroundKeepAlive))
     entries.append(.backgroundKeepAliveInfo("Maintains the MTProto connection in the background so updates arrive continuously without APNs certificates."))
@@ -441,6 +470,30 @@ public func toastSettingsController(context: AccountContext) -> ViewController {
             ToastSettings.shared.voiceChangerRobot = 0.0
             ToastSettings.shared.voiceChangerBass = 0.0
             ToastSettings.shared.voiceChangerDistortion = 0.0
+        },
+        openBypassLevelPicker: {
+            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+            let actionSheet = ActionSheetController(presentationData: presentationData)
+            var items: [ActionSheetItem] = [
+                ActionSheetTextItem(title: "Select Anti-Censorship Level")
+            ]
+            for level in ToastBypassLevel.allCases {
+                let isSelected = (level == ToastSettings.shared.bypassLevel)
+                let title = (isSelected ? "✓  " : "") + level.title
+                items.append(ActionSheetButtonItem(title: title, color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    ToastSettings.shared.bypassLevel = level
+                }))
+            }
+            actionSheet.setItemGroups([
+                ActionSheetItemGroup(items: items),
+                ActionSheetItemGroup(items: [
+                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                        actionSheet?.dismissAnimated()
+                    })
+                ])
+            ])
+            presentControllerImpl?(actionSheet, nil)
         },
         toggleBackgroundKeepAlive: { value in
             ToastSettings.shared.backgroundKeepAlive = value
