@@ -9,8 +9,10 @@ import UniversalMediaPlayer
 import TelegramUIPreferences
 import TelegramAudio
 import AccountContext
+import AVKit
+import CoreMedia
 
-final class OverlayInstantVideoNode: OverlayMediaItemNode {
+final class OverlayInstantVideoNode: OverlayMediaItemNode, AVPictureInPictureSampleBufferPlaybackDelegate {
     private let content: UniversalVideoContent
     private let videoNode: UniversalVideoNode
     private let decoration: OverlayInstantVideoDecoration
@@ -24,7 +26,7 @@ final class OverlayInstantVideoNode: OverlayMediaItemNode {
     }
     
     override var isMinimizeable: Bool {
-        return false
+        return true
     }
     
     var canAttachContent: Bool = true {
@@ -147,5 +149,43 @@ final class OverlayInstantVideoNode: OverlayMediaItemNode {
     
     func setForceAudioToSpeaker(_ forceAudioToSpeaker: Bool) {
         self.videoNode.setForceAudioToSpeaker(forceAudioToSpeaker)
+    }
+
+    override func updateMinimizedEdge(_ edge: OverlayMediaItemMinimizationEdge?, adjusting: Bool) {
+    }
+
+    @available(iOSApplicationExtension 15.0, iOS 15.0, *)
+    override public func makeNativeContentSource() -> AVPictureInPictureController.ContentSource? {
+        guard let videoLayer = self.videoNode.getVideoLayer() else {
+            return nil
+        }
+        return AVPictureInPictureController.ContentSource(sampleBufferDisplayLayer: videoLayer, playbackDelegate: self)
+    }
+
+    public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, setPlaying playing: Bool) {
+        if playing {
+            self.play()
+        } else {
+            self.pause()
+        }
+    }
+
+    public func pictureInPictureControllerTimeRangeForPlayback(_ pictureInPictureController: AVPictureInPictureController) -> CMTimeRange {
+        return CMTimeRange(start: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: 60.0, preferredTimescale: CMTimeScale(30.0)))
+    }
+
+    public func pictureInPictureControllerIsPlaybackPaused(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
+        return false
+    }
+
+    public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, didTransitionToRenderSize newRenderSize: CMVideoDimensions) {
+    }
+
+    public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, skipByInterval skipInterval: CMTime, completion completionHandler: @escaping () -> Void) {
+        completionHandler()
+    }
+
+    public func pictureInPictureControllerShouldProhibitBackgroundAudioPlayback(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
+        return false
     }
 }
