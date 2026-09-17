@@ -38,6 +38,10 @@ public final class ToastSettings {
     private let voiceChangerEnabledKey = "Toast_voiceChangerEnabled"
     private let voiceChangerPitchKey = "Toast_voiceChangerPitch"
     private let voiceChangerEchoKey = "Toast_voiceChangerEcho"
+    private let voiceChangerReverbKey = "Toast_voiceChangerReverb"
+    private let voiceChangerRobotKey = "Toast_voiceChangerRobot"
+    private let voiceChangerBassKey = "Toast_voiceChangerBass"
+    private let voiceChangerDistortionKey = "Toast_voiceChangerDistortion"
     private let voiceChangerModeKey = "Toast_voiceChangerMode"
     private let backgroundKeepAliveKey = "Toast_backgroundKeepAlive"
     private let localNotificationsEnabledKey = "Toast_localNotificationsEnabled"
@@ -55,6 +59,10 @@ public final class ToastSettings {
             self.voiceChangerEnabledKey: false,
             self.voiceChangerPitchKey: Float(0.0),
             self.voiceChangerEchoKey: Float(0.0),
+            self.voiceChangerReverbKey: Float(0.0),
+            self.voiceChangerRobotKey: Float(0.0),
+            self.voiceChangerBassKey: Float(0.0),
+            self.voiceChangerDistortionKey: Float(0.0),
             self.backgroundKeepAliveKey: true,
             self.localNotificationsEnabledKey: true
         ])
@@ -120,6 +128,46 @@ public final class ToastSettings {
         }
     }
 
+    public var voiceChangerReverb: Float {
+        get {
+            return self.defaults.object(forKey: self.voiceChangerReverbKey) as? Float ?? 0.0
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.voiceChangerReverbKey)
+            self.updatedPromise.set(true)
+        }
+    }
+
+    public var voiceChangerRobot: Float {
+        get {
+            return self.defaults.object(forKey: self.voiceChangerRobotKey) as? Float ?? 0.0
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.voiceChangerRobotKey)
+            self.updatedPromise.set(true)
+        }
+    }
+
+    public var voiceChangerBass: Float {
+        get {
+            return self.defaults.object(forKey: self.voiceChangerBassKey) as? Float ?? 0.0
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.voiceChangerBassKey)
+            self.updatedPromise.set(true)
+        }
+    }
+
+    public var voiceChangerDistortion: Float {
+        get {
+            return self.defaults.object(forKey: self.voiceChangerDistortionKey) as? Float ?? 0.0
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.voiceChangerDistortionKey)
+            self.updatedPromise.set(true)
+        }
+    }
+
     public var voiceChangerMode: ToastVoiceChangerMode {
         get {
             if !self.voiceChangerEnabled {
@@ -165,6 +213,10 @@ public final class ToastSettings {
         self.voiceChangerEnabled = false
         self.voiceChangerPitch = 0.0
         self.voiceChangerEcho = 0.0
+        self.voiceChangerReverb = 0.0
+        self.voiceChangerRobot = 0.0
+        self.voiceChangerBass = 0.0
+        self.voiceChangerDistortion = 0.0
         self.voiceChangerMode = .off
         self.backgroundKeepAlive = true
         self.localNotificationsEnabled = true
