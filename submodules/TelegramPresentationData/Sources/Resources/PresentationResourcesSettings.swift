@@ -131,7 +131,21 @@ public struct PresentationResourcesSettings {
     public static let powerSaving = renderSettingsIcon(name: "Item List/Icons/PowerSaving", backgroundColors: [colorOrange])
     public static let business = renderSettingsIcon(name: "Item List/Icons/Business", backgroundColors: [UIColor(rgb: 0xA95CE3), UIColor(rgb: 0xF16B80)])
     public static let myProfile = renderSettingsIcon(name: "Item List/Icons/Profile", backgroundColors: [colorRed])
-    public static let toast = renderSettingsIcon(name: "Item List/Icons/Appearance", backgroundColors: [UIColor(rgb: 0xFF9500), UIColor(rgb: 0xFF5E3A)])
+    public static let toast: UIImage? = {
+        if let image = UIImage(named: "ToastSlice", in: getAppBundle(), compatibleWith: nil) ?? UIImage(named: "Toast", in: getAppBundle(), compatibleWith: nil) {
+            return generateImage(CGSize(width: 30.0, height: 30.0), rotatedContext: { size, context in
+                let bounds = CGRect(origin: .zero, size: size)
+                context.clear(bounds)
+                let path = UIBezierPath(roundedRect: bounds, cornerRadius: 8.0)
+                context.addPath(path.cgPath)
+                context.clip()
+                if let cgImage = image.cgImage {
+                    context.draw(cgImage, in: bounds)
+                }
+            })
+        }
+        return renderSettingsIcon(name: "Item List/Icons/Appearance", backgroundColors: [UIColor(rgb: 0xFF55AA), UIColor(rgb: 0x55CDFC)])
+    }()
     
     public static let birthday = renderSettingsIcon(name: "Item List/Icons/Cake", backgroundColors: [colorBlue])
     public static let aiTools = renderSettingsIcon(name: "Item List/Icons/AITools", backgroundColors: [colorPurple])
