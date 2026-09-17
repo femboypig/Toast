@@ -14,7 +14,9 @@ private final class ToastSettingsControllerArguments {
     let toggleSaveDisappearingMedia: (Bool) -> Void
     let toggleAllowScreenshots: (Bool) -> Void
     let toggleAllowSavingProtectedContent: (Bool) -> Void
-    let selectVoiceChangerMode: () -> Void
+    let toggleVoiceChangerEnabled: (Bool) -> Void
+    let updateVoiceChangerPitch: (Float) -> Void
+    let updateVoiceChangerEcho: (Float) -> Void
     let toggleBackgroundKeepAlive: (Bool) -> Void
     let toggleLocalNotifications: (Bool) -> Void
     let openAppearance: () -> Void
@@ -25,7 +27,9 @@ private final class ToastSettingsControllerArguments {
         toggleSaveDisappearingMedia: @escaping (Bool) -> Void,
         toggleAllowScreenshots: @escaping (Bool) -> Void,
         toggleAllowSavingProtectedContent: @escaping (Bool) -> Void,
-        selectVoiceChangerMode: @escaping () -> Void,
+        toggleVoiceChangerEnabled: @escaping (Bool) -> Void,
+        updateVoiceChangerPitch: @escaping (Float) -> Void,
+        updateVoiceChangerEcho: @escaping (Float) -> Void,
         toggleBackgroundKeepAlive: @escaping (Bool) -> Void,
         toggleLocalNotifications: @escaping (Bool) -> Void,
         openAppearance: @escaping () -> Void,
@@ -35,7 +39,9 @@ private final class ToastSettingsControllerArguments {
         self.toggleSaveDisappearingMedia = toggleSaveDisappearingMedia
         self.toggleAllowScreenshots = toggleAllowScreenshots
         self.toggleAllowSavingProtectedContent = toggleAllowSavingProtectedContent
-        self.selectVoiceChangerMode = selectVoiceChangerMode
+        self.toggleVoiceChangerEnabled = toggleVoiceChangerEnabled
+        self.updateVoiceChangerPitch = updateVoiceChangerPitch
+        self.updateVoiceChangerEcho = updateVoiceChangerEcho
         self.toggleBackgroundKeepAlive = toggleBackgroundKeepAlive
         self.toggleLocalNotifications = toggleLocalNotifications
         self.openAppearance = openAppearance
@@ -61,7 +67,9 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
     case allowSavingProtectedContentInfo(String)
 
     case voiceChangerHeader(String)
-    case voiceChangerMode(String, String)
+    case voiceChangerEnabled(String, Bool)
+    case voiceChangerPitch(String, String, Float)
+    case voiceChangerEcho(String, String, Float)
     case voiceChangerInfo(String)
 
     case backgroundHeader(String)
@@ -80,7 +88,7 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
         switch self {
         case .mediaPrivacyHeader, .saveDisappearingMedia, .saveDisappearingMediaInfo, .allowScreenshots, .allowScreenshotsInfo, .allowSavingProtectedContent, .allowSavingProtectedContentInfo:
             return ToastSettingsSection.mediaPrivacy.rawValue
-        case .voiceChangerHeader, .voiceChangerMode, .voiceChangerInfo:
+        case .voiceChangerHeader, .voiceChangerEnabled, .voiceChangerPitch, .voiceChangerEcho, .voiceChangerInfo:
             return ToastSettingsSection.voiceChanger.rawValue
         case .backgroundHeader, .backgroundKeepAlive, .backgroundKeepAliveInfo, .localNotifications, .localNotificationsInfo:
             return ToastSettingsSection.background.rawValue
@@ -109,10 +117,14 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
             return 6
         case .voiceChangerHeader:
             return 10
-        case .voiceChangerMode:
+        case .voiceChangerEnabled:
             return 11
-        case .voiceChangerInfo:
+        case .voiceChangerPitch:
             return 12
+        case .voiceChangerEcho:
+            return 13
+        case .voiceChangerInfo:
+            return 14
         case .backgroundHeader:
             return 20
         case .backgroundKeepAlive:
@@ -164,10 +176,36 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
 
         case let .voiceChangerHeader(text):
             return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
-        case let .voiceChangerMode(title, value):
-            return ItemListDisclosureItem(presentationData: presentationData, title: title, label: value, sectionId: self.section, style: .blocks, action: {
-                args.selectVoiceChangerMode()
+        case let .voiceChangerEnabled(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                args.toggleVoiceChangerEnabled(value)
             })
+        case let .voiceChangerPitch(title, valueText, value):
+            return ToastSliderItem(
+                presentationData: presentationData,
+                title: title,
+                valueText: valueText,
+                minValue: -12.0,
+                maxValue: 12.0,
+                value: value,
+                sectionId: self.section,
+                updated: { value in
+                    args.updateVoiceChangerPitch(round(value))
+                }
+            )
+        case let .voiceChangerEcho(title, valueText, value):
+            return ToastSliderItem(
+                presentationData: presentationData,
+                title: title,
+                valueText: valueText,
+                minValue: 0.0,
+                maxValue: 1.0,
+                value: value,
+                sectionId: self.section,
+                updated: { value in
+                    args.updateVoiceChangerEcho(round(value * 20.0) / 20.0)
+                }
+            )
         case let .voiceChangerInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
 
@@ -215,14 +253,30 @@ private func toastSettingsEntries(settings: ToastSettings) -> [ToastSettingsEntr
     entries.append(.allowSavingProtectedContentInfo("Enables saving media, copying text, and forwarding messages from channels and chats with content protection enabled."))
 
     entries.append(.voiceChangerHeader("VOICE CHANGER"))
-    entries.append(.voiceChangerMode("Voice Effect", settings.voiceChangerMode.title))
-    entries.append(.voiceChangerInfo("Transforms your voice in real time for recorded voice messages before sending."))
+    entries.append(.voiceChangerEnabled("Enable Voice Changer", settings.voiceChangerEnabled))
+    if settings.voiceChangerEnabled {
+        let pitch = settings.voiceChangerPitch
+        let pitchText: String
+        if Int(pitch) == 0 {
+            pitchText = "0 (Normal)"
+        } else if pitch > 0 {
+            pitchText = "+\(Int(pitch)) st"
+        } else {
+            pitchText = "\(Int(pitch)) st"
+        }
+        entries.append(.voiceChangerPitch("Pitch Shift", pitchText, pitch))
+
+        let echo = settings.voiceChangerEcho
+        let echoText = "\(Int(echo * 100.0))%"
+        entries.append(.voiceChangerEcho("Echo / Space", echoText, echo))
+    }
+    entries.append(.voiceChangerInfo("Transforms your voice in real time with customizable pitch shift and echo effects for recorded voice messages."))
 
     entries.append(.backgroundHeader("NOTIFICATIONS & BACKGROUND"))
     entries.append(.backgroundKeepAlive("Keep Connection in Background", settings.backgroundKeepAlive))
-    entries.append(.backgroundKeepAliveInfo("Maintains the MTProto connection in the background so updates arrive even when running without Apple Developer Account / APNs."))
+    entries.append(.backgroundKeepAliveInfo("Maintains the MTProto connection in the background so updates arrive continuously without APNs certificates."))
     entries.append(.localNotifications("Local Notifications", settings.localNotificationsEnabled))
-    entries.append(.localNotificationsInfo("Delivers local system notification banners for incoming messages when Telegram is backgrounded without APNs push certificates."))
+    entries.append(.localNotificationsInfo("Delivers rich native local notification banners with sender and media preview when Telegram is in the background."))
 
     entries.append(.iconsHeader("APP ICONS"))
     entries.append(.iconsDisclosure("Appearance & Icons", "Toast"))
@@ -248,27 +302,14 @@ public func toastSettingsController(context: AccountContext) -> ViewController {
         toggleAllowSavingProtectedContent: { value in
             ToastSettings.shared.allowSavingProtectedContent = value
         },
-        selectVoiceChangerMode: {
-            let presentationData = context.sharedContext.currentPresentationData.with { $0 }
-            let actionSheet = ActionSheetController(presentationData: presentationData)
-            var items: [ActionSheetItem] = []
-
-            for mode in ToastVoiceChangerMode.allCases {
-                items.append(ActionSheetButtonItem(title: mode.title, color: .accent, action: { [weak actionSheet] in
-                    actionSheet?.dismissAnimated()
-                    ToastSettings.shared.voiceChangerMode = mode
-                }))
-            }
-
-            actionSheet.setItemGroups([
-                ActionSheetItemGroup(items: items),
-                ActionSheetItemGroup(items: [
-                    ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
-                        actionSheet?.dismissAnimated()
-                    })
-                ])
-            ])
-            presentControllerImpl?(actionSheet, nil)
+        toggleVoiceChangerEnabled: { value in
+            ToastSettings.shared.voiceChangerEnabled = value
+        },
+        updateVoiceChangerPitch: { value in
+            ToastSettings.shared.voiceChangerPitch = value
+        },
+        updateVoiceChangerEcho: { value in
+            ToastSettings.shared.voiceChangerEcho = value
         },
         toggleBackgroundKeepAlive: { value in
             ToastSettings.shared.backgroundKeepAlive = value
