@@ -389,9 +389,8 @@ public extension Message {
             return false
         }
     }
-    
     func isCopyProtected() -> Bool {
-        if UserDefaults.standard.bool(forKey: "Toast_allowSavingProtectedContent") {
+        if UserDefaults.standard.object(forKey: "Toast_allowSavingProtectedContent") as? Bool ?? true {
             return false
         }
         if self.flags.contains(.CopyProtected) {
