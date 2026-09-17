@@ -1534,8 +1534,9 @@ public final class ChatListSearchContainerNode: SearchDisplayControllerContentNo
                     }
                 }
                 
+                let forwardWithoutQuote = UserDefaults.standard.object(forKey: "Toast_forwardWithoutQuote") as? Bool ?? false
                 var attributes: [EngineMessage.Attribute] = []
-                attributes.append(ForwardOptionsMessageAttribute(hideNames: forwardOptions?.hideNames == true, hideCaptions: forwardOptions?.hideCaptions == true))
+                attributes.append(ForwardOptionsMessageAttribute(hideNames: forwardOptions?.hideNames == true || forwardWithoutQuote, hideCaptions: forwardOptions?.hideCaptions == true))
                 
                 result.append(contentsOf: messageIds.map { messageId -> EnqueueMessage in
                     return .forward(source: messageId, threadId: nil, grouping: .auto, attributes: attributes, correlationId: nil)
