@@ -504,14 +504,18 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, ASScrollVi
         let nextRate: AudioPlaybackRate
         if let rate = self.playbackBaseRate {
             switch rate {
-            case .x0_5, .x2:
+            case .x0_5:
                 nextRate = .x1
             case .x1:
                 nextRate = .x1_5
             case .x1_5:
                 nextRate = .x2
+            case .x2:
+                nextRate = .custom(3000)
             default:
-                if rate.doubleValue < 0.5 {
+                if rate.doubleValue >= 3.0 {
+                    nextRate = .x1
+                } else if rate.doubleValue < 0.5 {
                     nextRate = .x0_5
                 } else if rate.doubleValue < 1.0 {
                     nextRate = .x1
@@ -519,6 +523,8 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, ASScrollVi
                     nextRate = .x1_5
                 } else if rate.doubleValue < 2.0 {
                     nextRate = .x2
+                } else if rate.doubleValue < 3.0 {
+                    nextRate = .custom(3000)
                 } else {
                     nextRate = .x1
                 }
@@ -548,7 +554,8 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, ASScrollVi
             ("0.5x", "0.5x", .x0_5),
             (strings.PlaybackSpeed_Normal, "1x", .x1),
             ("1.5x", "1.5x", .x1_5),
-            ("2x", "2x", .x2)
+            ("2x", "2x", .x2),
+            ("3x", "3x", .custom(3000))
         ]
         return speedList
     }
@@ -559,7 +566,7 @@ public final class MediaNavigationAccessoryHeaderNode: ASDisplayNode, ASScrollVi
         let previousRate = self.playbackBaseRate
         let previousValue = self.playbackBaseRate?.doubleValue ?? 1.0
         let sliderValuePromise = ValuePromise<Double?>(nil)
-        let sliderItem: ContextMenuItem = .custom(SliderContextItem(minValue: 0.2, maxValue: 2.5, value: previousValue, valueChanged: { [weak self] newValue, finished in
+        let sliderItem: ContextMenuItem = .custom(SliderContextItem(minValue: 0.2, maxValue: 3.0, value: previousValue, valueChanged: { [weak self] newValue, finished in
             let newValue = normalizeValue(newValue)
             self?.setRate?(AudioPlaybackRate(newValue), .sliderChange)
             sliderValuePromise.set(newValue)
