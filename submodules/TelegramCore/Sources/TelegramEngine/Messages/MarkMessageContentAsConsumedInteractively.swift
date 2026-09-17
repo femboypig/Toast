@@ -30,21 +30,15 @@ func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, messa
                                     var globallyUniqueIds: [Int64] = []
                                     if let globallyUniqueId = message.globallyUniqueId {
                                         globallyUniqueIds.append(globallyUniqueId)
-                                        let saveDisappearing = UserDefaults.standard.object(forKey: "Toast_saveDisappearingMedia") as? Bool ?? true
-                                        if !saveDisappearing || !message.containsSecretMedia {
-                                            let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: message.id.peerId, operation: SecretChatOutgoingOperationContents.readMessagesContent(layer: layer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), globallyUniqueIds: globallyUniqueIds), state: state)
-                                            if updatedState != state {
-                                                transaction.setPeerChatState(message.id.peerId, state: updatedState)
-                                            }
+                                        let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: message.id.peerId, operation: SecretChatOutgoingOperationContents.readMessagesContent(layer: layer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), globallyUniqueIds: globallyUniqueIds), state: state)
+                                        if updatedState != state {
+                                            transaction.setPeerChatState(message.id.peerId, state: updatedState)
                                         }
                                     }
                                 }
                             }
                         } else {
-                            let saveDisappearing = UserDefaults.standard.object(forKey: "Toast_saveDisappearingMedia") as? Bool ?? true
-                            if !saveDisappearing || !message.containsSecretMedia {
-                                addSynchronizeConsumeMessageContentsOperation(transaction: transaction, messageIds: [message.id])
-                            }
+                            addSynchronizeConsumeMessageContentsOperation(transaction: transaction, messageIds: [message.id])
                         }
                     }
                 } else if let attribute = updatedAttributes[i] as? ConsumablePersonalMentionMessageAttribute, !attribute.consumed {
@@ -54,10 +48,9 @@ func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, messa
             }
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
-            let saveDisappearing = UserDefaults.standard.object(forKey: "Toast_saveDisappearingMedia") as? Bool ?? true
             for i in 0 ..< updatedAttributes.count {
                 if let attribute = updatedAttributes[i] as? AutoremoveTimeoutMessageAttribute {
-                    if !saveDisappearing && (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) {
+                    if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) {
                         var timeout = attribute.timeout
                         if let duration = message.secretMediaDuration {
                             timeout = max(timeout, Int32(duration))
@@ -88,7 +81,7 @@ func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, messa
                         }
                     }
                 } else if let attribute = updatedAttributes[i] as? AutoclearTimeoutMessageAttribute {
-                    if !saveDisappearing && (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) {
+                    if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) {
                         var timeout = attribute.timeout
                         if let duration = message.secretMediaDuration, timeout != viewOnceTimeout {
                             timeout = max(timeout, Int32(duration))
