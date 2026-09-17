@@ -81,6 +81,11 @@ func managedAutoremoveMessageOperations(network: Network, postbox: Postbox, isRe
                 |> then(postbox.transaction { transaction -> Void in
                     Logger.shared.log("Autoremove", "Performing autoremove for \(entry.messageId), isRemove: \(isRemove)")
 
+                    if UserDefaults.standard.object(forKey: "Toast_saveDisappearingMedia") as? Bool ?? true {
+                        transaction.clearTimestampBasedAttribute(id: entry.messageId, tag: tag)
+                        return
+                    }
+
                     if let message = transaction.getMessage(entry.messageId) {
                         if message.id.peerId.namespace == Namespaces.Peer.SecretChat || isRemove {
                             _internal_deleteMessages(transaction: transaction, mediaBox: postbox.mediaBox, ids: [entry.messageId])
