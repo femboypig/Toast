@@ -41,6 +41,10 @@ final class StoryItemImageView: UIView {
     }
     
     private func updateImage(image: UIImage, isCaptureProtected: Bool) {
+        var isCaptureProtected = isCaptureProtected
+        if UserDefaults.standard.object(forKey: "Toast_allowScreenshots") as? Bool ?? true {
+            isCaptureProtected = false
+        }
         self.contentView.image = image
         
         if isCaptureProtected {
@@ -66,6 +70,10 @@ final class StoryItemImageView: UIView {
     }
     
     func update(context: AccountContext, strings: PresentationStrings, peer: EnginePeer, storyId: Int32, media: EngineMedia, size: CGSize, isCaptureProtected: Bool, attemptSynchronous: Bool, transition: ComponentTransition) {
+        var isCaptureProtected = isCaptureProtected
+        if UserDefaults.standard.object(forKey: "Toast_allowScreenshots") as? Bool ?? true {
+            isCaptureProtected = false
+        }
         self.backgroundColor = isCaptureProtected ? UIColor(rgb: 0x181818) : nil
         
         var dimensions: CGSize?
