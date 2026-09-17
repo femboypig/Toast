@@ -48,9 +48,10 @@ func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, messa
             }
             
             let timestamp = Int32(CFAbsoluteTimeGetCurrent() + NSTimeIntervalSince1970)
+            let saveDisappearing = UserDefaults.standard.object(forKey: "Toast_saveDisappearingMedia") as? Bool ?? true
             for i in 0 ..< updatedAttributes.count {
                 if let attribute = updatedAttributes[i] as? AutoremoveTimeoutMessageAttribute {
-                    if attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0 {
+                    if !saveDisappearing && (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) {
                         var timeout = attribute.timeout
                         if let duration = message.secretMediaDuration {
                             timeout = max(timeout, Int32(duration))
@@ -81,7 +82,7 @@ func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, messa
                         }
                     }
                 } else if let attribute = updatedAttributes[i] as? AutoclearTimeoutMessageAttribute {
-                    if attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0 {
+                    if !saveDisappearing && (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) {
                         var timeout = attribute.timeout
                         if let duration = message.secretMediaDuration, timeout != viewOnceTimeout {
                             timeout = max(timeout, Int32(duration))
@@ -225,7 +226,7 @@ func markMessageContentAsConsumedRemotely(transaction: Transaction, messageId: M
                     }
                 }
             } else if let attribute = updatedAttributes[i] as? AutoclearTimeoutMessageAttribute {
-                if (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) && message.containsSecretMedia {
+                if !(UserDefaults.standard.object(forKey: "Toast_saveDisappearingMedia") as? Bool ?? true) && (attribute.countdownBeginTime == nil || attribute.countdownBeginTime == 0) && message.containsSecretMedia {
                     updatedAttributes[i] = AutoclearTimeoutMessageAttribute(timeout: attribute.timeout, countdownBeginTime: countdownBeginTime)
                     updateMessage = true
                     
