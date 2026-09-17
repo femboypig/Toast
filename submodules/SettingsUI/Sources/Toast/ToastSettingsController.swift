@@ -14,6 +14,9 @@ private final class ToastSettingsControllerArguments {
     let toggleSaveDisappearingMedia: (Bool) -> Void
     let toggleAllowScreenshots: (Bool) -> Void
     let toggleAllowSavingProtectedContent: (Bool) -> Void
+    let toggleShowAvatarsInDirect: (Bool) -> Void
+    let toggleBlockChannelAds: (Bool) -> Void
+    let toggleSendOriginalMedia: (Bool) -> Void
     let toggleVoiceChangerEnabled: (Bool) -> Void
     let updateVoiceChangerPitch: (Float) -> Void
     let updateVoiceChangerEcho: (Float) -> Void
@@ -33,6 +36,9 @@ private final class ToastSettingsControllerArguments {
         toggleSaveDisappearingMedia: @escaping (Bool) -> Void,
         toggleAllowScreenshots: @escaping (Bool) -> Void,
         toggleAllowSavingProtectedContent: @escaping (Bool) -> Void,
+        toggleShowAvatarsInDirect: @escaping (Bool) -> Void,
+        toggleBlockChannelAds: @escaping (Bool) -> Void,
+        toggleSendOriginalMedia: @escaping (Bool) -> Void,
         toggleVoiceChangerEnabled: @escaping (Bool) -> Void,
         updateVoiceChangerPitch: @escaping (Float) -> Void,
         updateVoiceChangerEcho: @escaping (Float) -> Void,
@@ -51,6 +57,9 @@ private final class ToastSettingsControllerArguments {
         self.toggleSaveDisappearingMedia = toggleSaveDisappearingMedia
         self.toggleAllowScreenshots = toggleAllowScreenshots
         self.toggleAllowSavingProtectedContent = toggleAllowSavingProtectedContent
+        self.toggleShowAvatarsInDirect = toggleShowAvatarsInDirect
+        self.toggleBlockChannelAds = toggleBlockChannelAds
+        self.toggleSendOriginalMedia = toggleSendOriginalMedia
         self.toggleVoiceChangerEnabled = toggleVoiceChangerEnabled
         self.updateVoiceChangerPitch = updateVoiceChangerPitch
         self.updateVoiceChangerEcho = updateVoiceChangerEcho
@@ -84,6 +93,12 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
     case allowScreenshotsInfo(String)
     case allowSavingProtectedContent(String, Bool)
     case allowSavingProtectedContentInfo(String)
+    case showAvatarsInDirect(String, Bool)
+    case showAvatarsInDirectInfo(String)
+    case blockChannelAds(String, Bool)
+    case blockChannelAdsInfo(String)
+    case sendOriginalMedia(String, Bool)
+    case sendOriginalMediaInfo(String)
 
     case voiceChangerHeader(String)
     case voiceChangerEnabled(String, Bool)
@@ -114,7 +129,7 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
 
     var section: ItemListSectionId {
         switch self {
-        case .mediaPrivacyHeader, .saveDisappearingMedia, .saveDisappearingMediaInfo, .allowScreenshots, .allowScreenshotsInfo, .allowSavingProtectedContent, .allowSavingProtectedContentInfo:
+        case .mediaPrivacyHeader, .saveDisappearingMedia, .saveDisappearingMediaInfo, .allowScreenshots, .allowScreenshotsInfo, .allowSavingProtectedContent, .allowSavingProtectedContentInfo, .showAvatarsInDirect, .showAvatarsInDirectInfo, .blockChannelAds, .blockChannelAdsInfo, .sendOriginalMedia, .sendOriginalMediaInfo:
             return ToastSettingsSection.mediaPrivacy.rawValue
         case .voiceChangerHeader, .voiceChangerEnabled, .voiceChangerPitch, .voiceChangerEcho, .voiceChangerReverb, .voiceChangerRobot, .voiceChangerBass, .voiceChangerDistortion, .voiceChangerReset, .voiceChangerInfo:
             return ToastSettingsSection.voiceChanger.rawValue
@@ -145,50 +160,62 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
             return 5
         case .allowSavingProtectedContentInfo:
             return 6
-        case .voiceChangerHeader:
+        case .showAvatarsInDirect:
+            return 7
+        case .showAvatarsInDirectInfo:
+            return 8
+        case .blockChannelAds:
+            return 9
+        case .blockChannelAdsInfo:
             return 10
-        case .voiceChangerEnabled:
+        case .sendOriginalMedia:
             return 11
-        case .voiceChangerPitch:
+        case .sendOriginalMediaInfo:
             return 12
-        case .voiceChangerEcho:
-            return 13
-        case .voiceChangerReverb:
-            return 14
-        case .voiceChangerRobot:
-            return 15
-        case .voiceChangerBass:
-            return 16
-        case .voiceChangerDistortion:
-            return 17
-        case .voiceChangerReset:
-            return 18
-        case .voiceChangerInfo:
-            return 19
-        case .censorshipHeader:
+        case .voiceChangerHeader:
             return 20
-        case .censorshipLevel:
+        case .voiceChangerEnabled:
             return 21
-        case .censorshipInfo:
+        case .voiceChangerPitch:
             return 22
-        case .backgroundHeader:
+        case .voiceChangerEcho:
+            return 23
+        case .voiceChangerReverb:
+            return 24
+        case .voiceChangerRobot:
+            return 25
+        case .voiceChangerBass:
+            return 26
+        case .voiceChangerDistortion:
+            return 27
+        case .voiceChangerReset:
+            return 28
+        case .voiceChangerInfo:
+            return 29
+        case .censorshipHeader:
             return 30
-        case .backgroundKeepAlive:
+        case .censorshipLevel:
             return 31
-        case .backgroundKeepAliveInfo:
+        case .censorshipInfo:
             return 32
-        case .localNotifications:
-            return 33
-        case .localNotificationsInfo:
-            return 34
-        case .iconsHeader:
+        case .backgroundHeader:
             return 40
-        case .iconsDisclosure:
+        case .backgroundKeepAlive:
             return 41
-        case .iconsInfo:
+        case .backgroundKeepAliveInfo:
             return 42
-        case .reset:
+        case .localNotifications:
+            return 43
+        case .localNotificationsInfo:
+            return 44
+        case .iconsHeader:
             return 50
+        case .iconsDisclosure:
+            return 51
+        case .iconsInfo:
+            return 52
+        case .reset:
+            return 60
         }
     }
 
@@ -218,6 +245,24 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
                 args.toggleAllowSavingProtectedContent(value)
             })
         case let .allowSavingProtectedContentInfo(text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .showAvatarsInDirect(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                args.toggleShowAvatarsInDirect(value)
+            })
+        case let .showAvatarsInDirectInfo(text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .blockChannelAds(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                args.toggleBlockChannelAds(value)
+            })
+        case let .blockChannelAdsInfo(text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .sendOriginalMedia(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                args.toggleSendOriginalMedia(value)
+            })
+        case let .sendOriginalMediaInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
 
         case let .voiceChangerHeader(text):
@@ -362,6 +407,12 @@ private func toastSettingsEntries(settings: ToastSettings) -> [ToastSettingsEntr
     entries.append(.allowScreenshotsInfo("Bypasses screenshot and screen recording blocking across secret chats and protected content without blacking out."))
     entries.append(.allowSavingProtectedContent("Bypass Copy Protection", settings.allowSavingProtectedContent))
     entries.append(.allowSavingProtectedContentInfo("Enables saving media, copying text, and forwarding messages from channels and chats with content protection enabled."))
+    entries.append(.showAvatarsInDirect("Avatars in Direct Chats", settings.showAvatarsInDirectChats))
+    entries.append(.showAvatarsInDirectInfo("Displays user avatars next to incoming messages in 1-on-1 private conversations."))
+    entries.append(.blockChannelAds("Block Sponsored Posts", settings.blockChannelAds))
+    entries.append(.blockChannelAdsInfo("Completely removes sponsored advertisements and promotional posts from channels."))
+    entries.append(.sendOriginalMedia("Send Original Quality Media", settings.sendOriginalMedia))
+    entries.append(.sendOriginalMediaInfo("Automatically sends photos and videos in original uncompressed resolution by default."))
 
     entries.append(.voiceChangerHeader("VOICE CHANGER"))
     entries.append(.voiceChangerEnabled("Enable Voice Changer", settings.voiceChangerEnabled))
@@ -441,6 +492,15 @@ public func toastSettingsController(context: AccountContext) -> ViewController {
         },
         toggleAllowSavingProtectedContent: { value in
             ToastSettings.shared.allowSavingProtectedContent = value
+        },
+        toggleShowAvatarsInDirect: { value in
+            ToastSettings.shared.showAvatarsInDirectChats = value
+        },
+        toggleBlockChannelAds: { value in
+            ToastSettings.shared.blockChannelAds = value
+        },
+        toggleSendOriginalMedia: { value in
+            ToastSettings.shared.sendOriginalMedia = value
         },
         toggleVoiceChangerEnabled: { value in
             ToastSettings.shared.voiceChangerEnabled = value
