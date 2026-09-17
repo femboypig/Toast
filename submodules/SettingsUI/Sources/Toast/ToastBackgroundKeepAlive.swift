@@ -2,6 +2,7 @@ import Foundation
 import UIKit
 import UserNotifications
 import AVFoundation
+import Intents
 
 public final class ToastBackgroundKeepAlive {
     public static let shared = ToastBackgroundKeepAlive()
@@ -135,7 +136,15 @@ public final class ToastBackgroundKeepAlive {
         self.silentAudioPlayer = nil
     }
 
-    public func postLocalNotification(title: String, body: String, peerId: Int64, messageId: Int32) {
+    public func postLocalNotification(
+        title: String,
+        body: String,
+        peerId: Int64,
+        messageId: Int32,
+        senderTitle: String? = nil,
+        isGroup: Bool = false,
+        avatarData: Data? = nil
+    ) {
         guard ToastSettings.shared.localNotificationsEnabled else { return }
 
         let center = UNUserNotificationCenter.current()
@@ -148,9 +157,92 @@ public final class ToastBackgroundKeepAlive {
             "messageId": "\(messageId)"
         ]
 
+        var resolvedAvatarData = avatarData
+        if resolvedAvatarData == nil {
+            let letter = String((senderTitle ?? title).prefix(1)).uppercased()
+            let size = CGSize(width: 120.0, height: 120.0)
+            UIGraphicsBeginImageContextWithOptions(size, false, 2.0)
+            if let ctx = UIGraphicsGetCurrentContext() {
+                ctx.saveGState()
+                ctx.addEllipse(in: CGRect(origin: .zero, size: size))
+                ctx.clip()
+
+                let hash = abs((senderTitle ?? title).hashValue)
+                let hue = CGFloat(hash % 360) / 360.0
+                let startColor = UIColor(hue: hue, saturation: 0.65, brightness: 0.85, alpha: 1.0)
+                let endColor = UIColor(hue: hue, saturation: 0.8, brightness: 0.65, alpha: 1.0)
+                let colors = [startColor.cgColor, endColor.cgColor] as CFArray
+                let colorSpace = CGColorSpaceCreateDeviceRGB()
+                if let gradient = CGGradient(colorsSpace: colorSpace, colors: colors, locations: [0.0, 1.0]) {
+                    ctx.drawLinearGradient(gradient, start: CGPoint(x: 0, y: 0), end: CGPoint(x: 0, y: size.height), options: [])
+                }
+
+                if !letter.isEmpty {
+                    let font = UIFont.systemFont(ofSize: 52.0, weight: .semibold)
+                    let attributes: [NSAttributedString.Key: Any] = [
+                        .font: font,
+                        .foregroundColor: UIColor.white
+                    ]
+                    let str = NSAttributedString(string: letter, attributes: attributes)
+                    let strSize = str.size()
+                    let strRect = CGRect(
+                        x: (size.width - strSize.width) / 2.0,
+                        y: (size.height - strSize.height) / 2.0,
+                        width: strSize.width,
+                        height: strSize.height
+                    )
+                    str.draw(in: strRect)
+                }
+
+                ctx.restoreGState()
+                let img = UIGraphicsGetImageFromCurrentImageContext()
+                UIGraphicsEndImageContext()
+                resolvedAvatarData = img?.jpegData(compressionQuality: 0.85)
+            } else {
+                UIGraphicsEndImageContext()
+            }
+        }
+
+        var finalContent: UNNotificationContent = content
+
+        if #available(iOS 15.0, *) {
+            let senderName = senderTitle ?? title
+            var personImage: INImage?
+            if let data = resolvedAvatarData {
+                personImage = INImage(imageData: data)
+            }
+
+            let handle = INPersonHandle(value: "\(peerId)", type: .unknown)
+            let sender = INPerson(
+                personHandle: handle,
+                nameComponents: nil,
+                displayName: senderName,
+                image: personImage,
+                contactIdentifier: nil,
+                customIdentifier: "\(peerId)"
+            )
+
+            let intent = INSendMessageIntent(
+                recipients: isGroup ? nil : [sender],
+                content: content.body,
+                speakableGroupName: isGroup ? INSpeakableString(spokenPhrase: title) : nil,
+                conversationIdentifier: "\(peerId)",
+                serviceName: nil,
+                sender: sender
+            )
+
+            let interaction = INInteraction(intent: intent, response: nil)
+            interaction.direction = .incoming
+            interaction.donate(completion: nil)
+
+            if let updated = try? content.updating(from: intent) {
+                finalContent = updated
+            }
+        }
+
         let request = UNNotificationRequest(
             identifier: "toast_msg_\(peerId)_\(messageId)",
-            content: content,
+            content: finalContent,
             trigger: nil
         )
 
