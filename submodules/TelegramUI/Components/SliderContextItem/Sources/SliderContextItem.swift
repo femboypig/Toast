@@ -287,6 +287,8 @@ private final class SliderContextItemNode: ASDisplayNode, ContextMenuCustomNode,
                     self.hapticFeedback.impact(.soft)
                 } else if self.value == 2.5 && previousValue != 2.5 {
                     self.hapticFeedback.impact(.soft)
+                } else if self.value == 3.0 && previousValue != 3.0 {
+                    self.hapticFeedback.impact(.soft)
                 } else if self.value == 0.05 && previousValue != 0.05 {
                     self.hapticFeedback.impact(.soft)
                 }
