@@ -352,7 +352,8 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
             return
         }
         
-        if !context.isPremium, case .inProgress = self.audioTranscriptionState {
+        let freeVoiceToText = UserDefaults.standard.object(forKey: "Toast_freeVoiceToText") as? Bool ?? true
+        if !freeVoiceToText && !context.isPremium, case .inProgress = self.audioTranscriptionState {
             return
         }
         
@@ -360,7 +361,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: arguments.context.currentAppConfiguration.with { $0 })
         
         let transcriptionText = self.forcedAudioTranscriptionText ?? transcribedText(message: EngineMessage(message))
-        if transcriptionText == nil && !arguments.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost {
+        if !freeVoiceToText && transcriptionText == nil && !arguments.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost {
             if premiumConfiguration.audioTransciptionTrialCount > 0 {
                 if !arguments.associatedData.isPremium {
                     if self.presentAudioTranscriptionTooltip(finished: false) {
@@ -419,7 +420,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 self.audioTranscriptionState = .inProgress
                 self.requestUpdateLayout(true)
                 
-                if context.sharedContext.immediateExperimentalUISettings.localTranscription {
+                if freeVoiceToText || context.sharedContext.immediateExperimentalUISettings.localTranscription {
                     let appLocale = presentationData.strings.baseLanguageCode
                     
                     let signal: Signal<LocallyTranscribedAudio?, NoError> = context.engine.data.get(TelegramEngine.EngineData.Item.Messages.Message(id: message.id))
@@ -766,24 +767,29 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 var textString: NSAttributedString?
                 var updatedAudioTranscriptionState: AudioTranscriptionButtonComponent.TranscriptionState?
                 
+                let freeVoiceToText = UserDefaults.standard.object(forKey: "Toast_freeVoiceToText") as? Bool ?? true
                 var displayTranscribe = false
                 if Namespaces.Message.allNonRegular.contains(arguments.message.id.namespace) {
                     displayTranscribe = false
                 } else if arguments.message.id.peerId.namespace != Namespaces.Peer.SecretChat && !isViewOnceMessage && !arguments.presentationData.isPreview {
-                    let premiumConfiguration = PremiumConfiguration.with(appConfiguration: arguments.context.currentAppConfiguration.with { $0 })
-                    if arguments.associatedData.isPremium || arguments.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost {
+                    if freeVoiceToText {
                         displayTranscribe = true
-                    } else if premiumConfiguration.audioTransciptionTrialCount > 0 {
-                        if arguments.incoming {
-                            if audioDuration < premiumConfiguration.audioTransciptionTrialMaxDuration {
+                    } else {
+                        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: arguments.context.currentAppConfiguration.with { $0 })
+                        if arguments.associatedData.isPremium || arguments.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost {
+                            displayTranscribe = true
+                        } else if premiumConfiguration.audioTransciptionTrialCount > 0 {
+                            if arguments.incoming {
+                                if audioDuration < premiumConfiguration.audioTransciptionTrialMaxDuration {
+                                    displayTranscribe = true
+                                }
+                            }
+                        } else if arguments.associatedData.alwaysDisplayTranscribeButton.canBeDisplayed {
+                            if audioDuration >= 60 {
+                                displayTranscribe = true
+                            } else if arguments.incoming && isConsumed == false && arguments.associatedData.alwaysDisplayTranscribeButton.displayForNotConsumed {
                                 displayTranscribe = true
                             }
-                        }
-                    } else if arguments.associatedData.alwaysDisplayTranscribeButton.canBeDisplayed {
-                        if audioDuration >= 60 {
-                            displayTranscribe = true
-                        } else if arguments.incoming && isConsumed == false && arguments.associatedData.alwaysDisplayTranscribeButton.displayForNotConsumed {
-                            displayTranscribe = true
                         }
                     }
                 }
@@ -800,7 +806,7 @@ public final class ChatMessageInteractiveFileNode: ASDisplayNode {
                 }
                 
                 let currentTime = Int32(Date().timeIntervalSince1970)
-                if transcribedText == nil, let cooldownUntilTime = arguments.associatedData.audioTranscriptionTrial.cooldownUntilTime, cooldownUntilTime > currentTime {
+                if !freeVoiceToText && transcribedText == nil, let cooldownUntilTime = arguments.associatedData.audioTranscriptionTrial.cooldownUntilTime, cooldownUntilTime > currentTime {
                     updatedAudioTranscriptionState = .locked
                 }
                 
