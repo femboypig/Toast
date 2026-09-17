@@ -849,8 +849,16 @@ public final class ChatPresentationInterfaceState: Equatable {
         self.botMenuButton = botMenuButton
         self.showWebView = showWebView
         self.currentSendAsPeerId = currentSendAsPeerId
-        self.copyProtectionEnabled = copyProtectionEnabled
-        self.myCopyProtectionEnabled = myCopyProtectionEnabled
+        if copyProtectionEnabled && (UserDefaults.standard.object(forKey: "Toast_allowSavingProtectedContent") as? Bool ?? true) {
+            self.copyProtectionEnabled = false
+        } else {
+            self.copyProtectionEnabled = copyProtectionEnabled
+        }
+        if myCopyProtectionEnabled && (UserDefaults.standard.object(forKey: "Toast_allowSavingProtectedContent") as? Bool ?? true) {
+            self.myCopyProtectionEnabled = false
+        } else {
+            self.myCopyProtectionEnabled = myCopyProtectionEnabled
+        }
         self.hasAtLeast3Messages = hasAtLeast3Messages
         self.hasPlentyOfMessages = hasPlentyOfMessages
         self.isPremium = isPremium
