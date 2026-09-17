@@ -73,6 +73,8 @@ final class UnauthorizedApplicationContext {
             }
         })
         
+        ToastAntiCensorship.shared.configure(accountManager: sharedContext.accountManager)
+        
         DeviceAccess.authorizeAccess(to: .cellularData, presentationData: sharedContext.currentPresentationData.with { $0 }, present: { [weak self] c, a in
             if let strongSelf = self {
                 (strongSelf.rootController.viewControllers.last as? ViewController)?.present(c, in: .window(.root))
@@ -122,6 +124,7 @@ final class AuthorizedApplicationContext {
     private let watchNavigateToMessageDisposable = MetaDisposable()
     private let permissionsDisposable = MetaDisposable()
     private let appUpdateInfoDisposable = MetaDisposable()
+    private let networkStateDisposable = MetaDisposable()
     
     private var inAppNotificationSettings: InAppNotificationSettings?
     
@@ -288,6 +291,23 @@ final class AuthorizedApplicationContext {
                         reinitializedNotificationSettings()
                     }
                 }
+            }
+        }))
+
+        ToastAntiCensorship.shared.configure(accountManager: accountManager)
+        self.networkStateDisposable.set((context.account.networkState
+        |> deliverOnMainQueue).start(next: { state in
+            switch state {
+            case let .connecting(proxy):
+                if let proxy = proxy, proxy.hasConnectionIssues {
+                    ToastAntiCensorship.shared.reportConnectionFailure()
+                }
+            case let .updating(proxy):
+                if let proxy = proxy, proxy.hasConnectionIssues {
+                    ToastAntiCensorship.shared.reportConnectionFailure()
+                }
+            default:
+                break
             }
         }))
 
@@ -910,6 +930,7 @@ final class AuthorizedApplicationContext {
         self.watchNavigateToMessageDisposable.dispose()
         self.permissionsDisposable.dispose()
         self.scheduledCallPeerDisposable.dispose()
+        self.networkStateDisposable.dispose()
     }
     
     func openNotificationSettings() {
