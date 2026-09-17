@@ -53,7 +53,7 @@ private func screenRecordingActive() -> Signal<Bool, NoError> {
 public func screenCaptureEvents() -> Signal<ScreenCaptureEvent, NoError> {
     return Signal { subscriber in
         let observer = NotificationCenter.default.addObserver(forName: UIApplication.userDidTakeScreenshotNotification, object: nil, queue: .main, using: { _ in
-            if !UserDefaults.standard.bool(forKey: "Toast_allowScreenshots") {
+            if !(UserDefaults.standard.object(forKey: "Toast_allowScreenshots") as? Bool ?? true) {
                 subscriber.putNext(.still)
             }
         })
@@ -62,7 +62,7 @@ public func screenCaptureEvents() -> Signal<ScreenCaptureEvent, NoError> {
         let screenRecordingDisposable = screenRecordingActive().start(next: { value in
             if value != previous {
                 previous = value
-                if value && !UserDefaults.standard.bool(forKey: "Toast_allowScreenshots") {
+                if value && !(UserDefaults.standard.object(forKey: "Toast_allowScreenshots") as? Bool ?? true) {
                     subscriber.putNext(.video)
                 }
             }
@@ -90,7 +90,7 @@ public final class ScreenCaptureDetectionManager {
             guard let _ = self else {
                 return
             }
-            if !UserDefaults.standard.bool(forKey: "Toast_allowScreenshots") {
+            if !(UserDefaults.standard.object(forKey: "Toast_allowScreenshots") as? Bool ?? true) {
                 let _ = check()
             }
         })
@@ -111,7 +111,7 @@ public final class ScreenCaptureDetectionManager {
                             guard let strongSelf = self else {
                                 return
                             }
-                            if check() {
+                            if !(UserDefaults.standard.object(forKey: "Toast_allowScreenshots") as? Bool ?? true) && check() {
                                 strongSelf.screenRecordingCheckTimer?.invalidate()
                                 strongSelf.screenRecordingCheckTimer = nil
                             }
