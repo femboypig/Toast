@@ -6,6 +6,7 @@ import SwiftSignalKit
 import TelegramPresentationData
 import ItemListUI
 import PresentationDataUtils
+import LegacyComponents
 
 final class ToastSliderItem: ListViewItem, ItemListItem {
     let presentationData: ItemListPresentationData
@@ -89,7 +90,7 @@ private final class ToastSliderItemNode: ListViewItemNode {
     private let maskNode: ASImageNode
     private let titleNode: TextNode
     private let valueNode: TextNode
-    private var sliderView: UISlider?
+    private var sliderView: TGPhotoEditorSliderView?
     private var item: ToastSliderItem?
 
     init() {
@@ -207,36 +208,43 @@ private final class ToastSliderItemNode: ListViewItemNode {
                 strongSelf.titleNode.frame = CGRect(origin: CGPoint(x: params.leftInset + 16.0, y: 12.0), size: titleLayout.size)
                 strongSelf.valueNode.frame = CGRect(origin: CGPoint(x: params.width - params.rightInset - 16.0 - valueLayout.size.width, y: 12.0), size: valueLayout.size)
 
-                let sliderView: UISlider
+                let sliderView: TGPhotoEditorSliderView
                 if let current = strongSelf.sliderView {
                     sliderView = current
                 } else {
-                    let created = UISlider()
+                    let created = TGPhotoEditorSliderView()
+                    created.enablePanHandling = true
+                    created.disablesInteractiveTransitionGestureRecognizer = true
+                    created.trackCornerRadius = 1.0
+                    created.lineSize = 2.0
                     created.addTarget(strongSelf, action: #selector(strongSelf.sliderChanged(_:)), for: .valueChanged)
                     strongSelf.view.addSubview(created)
                     strongSelf.sliderView = created
                     sliderView = created
                 }
 
-                sliderView.minimumValue = item.minValue
-                sliderView.maximumValue = item.maxValue
+                sliderView.minimumValue = CGFloat(item.minValue)
+                sliderView.maximumValue = CGFloat(item.maxValue)
+                sliderView.startValue = CGFloat(item.minValue)
                 if !sliderView.isTracking {
-                    sliderView.value = item.value
+                    sliderView.value = CGFloat(item.value)
                 }
-                sliderView.minimumTrackTintColor = theme.list.itemAccentColor
-                sliderView.maximumTrackTintColor = theme.list.itemSwitchColors.frameColor
+                sliderView.backgroundColor = .clear
+                sliderView.backColor = theme.list.itemSwitchColors.frameColor
+                sliderView.trackColor = theme.list.itemAccentColor
+                sliderView.knobImage = PresentationResourcesItemList.knobImage(theme)
 
                 sliderView.frame = CGRect(
                     x: params.leftInset + 16.0,
-                    y: 38.0,
+                    y: 34.0,
                     width: max(0.0, params.width - params.leftInset - params.rightInset - 32.0),
-                    height: 32.0
+                    height: 40.0
                 )
             })
         }
     }
 
-    @objc private func sliderChanged(_ sender: UISlider) {
-        self.item?.updated(sender.value)
+    @objc private func sliderChanged(_ sender: TGPhotoEditorSliderView) {
+        self.item?.updated(Float(sender.value))
     }
 }
