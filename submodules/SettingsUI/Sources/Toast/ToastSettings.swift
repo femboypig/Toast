@@ -82,6 +82,7 @@ public final class ToastSettings {
     private let showAvatarsInDirectChatsKey = "Toast_showAvatarsInDirectChats"
     private let blockChannelAdsKey = "Toast_blockChannelAds"
     private let sendOriginalMediaKey = "Toast_sendOriginalMedia"
+    private let freeVoiceToTextKey = "Toast_freeVoiceToText"
 
     private let updatedPromise = ValuePromise<Bool>(true, ignoreRepeated: false)
     public var updated: Signal<Void, NoError> {
@@ -105,7 +106,8 @@ public final class ToastSettings {
             self.bypassLevelKey: ToastBypassLevel.max.rawValue,
             self.showAvatarsInDirectChatsKey: true,
             self.blockChannelAdsKey: true,
-            self.sendOriginalMediaKey: false
+            self.sendOriginalMediaKey: false,
+            self.freeVoiceToTextKey: true
         ])
     }
 
@@ -292,6 +294,16 @@ public final class ToastSettings {
         }
     }
 
+    public var freeVoiceToText: Bool {
+        get {
+            return self.defaults.object(forKey: self.freeVoiceToTextKey) as? Bool ?? true
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.freeVoiceToTextKey)
+            self.updatedPromise.set(true)
+        }
+    }
+
     public func resetToDefaults() {
         self.saveDisappearingMedia = true
         self.allowScreenshots = true
@@ -310,6 +322,7 @@ public final class ToastSettings {
         self.showAvatarsInDirectChats = true
         self.blockChannelAds = true
         self.sendOriginalMedia = false
+        self.freeVoiceToText = true
         self.updatedPromise.set(true)
     }
 }
