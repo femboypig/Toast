@@ -1757,6 +1757,9 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 hasAvatar = true
             } else {
                 effectiveAuthor = firstMessage.author
+                if effectiveAuthor == nil && (UserDefaults.standard.object(forKey: "Toast_showAvatarsInDirectChats") as? Bool ?? true) {
+                    effectiveAuthor = firstMessage.peers[firstMessage.id.peerId]
+                }
                 
                 var allowAuthor = incoming
                 
