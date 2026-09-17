@@ -92,7 +92,7 @@ private final class ToastSliderItemNode: ListViewItemNode {
     private var sliderView: UISlider?
     private var item: ToastSliderItem?
 
-    override init() {
+    init() {
         self.backgroundNode = ASDisplayNode()
         self.backgroundNode.isLayerBacked = true
 
@@ -110,7 +110,7 @@ private final class ToastSliderItemNode: ListViewItemNode {
         self.valueNode = TextNode()
         self.valueNode.isUserInteractionEnabled = false
 
-        super.init()
+        super.init(layerBacked: false)
     }
 
     func asyncLayout() -> (_ item: ToastSliderItem, _ params: ListViewItemLayoutParams, _ neighbors: ItemListNeighbors) -> (ListViewItemNodeLayout, () -> Void) {
@@ -141,6 +141,7 @@ private final class ToastSliderItemNode: ListViewItemNode {
             let contentSize = CGSize(width: params.width, height: 78.0)
             let insets = itemListNeighborsGroupedInsets(neighbors, params)
             let layout = ListViewItemNodeLayout(contentSize: contentSize, insets: insets)
+            let separatorHeight = UIScreenPixel
 
             return (layout, {
                 guard let strongSelf = self else { return }
