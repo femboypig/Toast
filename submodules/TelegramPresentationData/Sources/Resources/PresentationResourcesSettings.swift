@@ -132,8 +132,8 @@ public struct PresentationResourcesSettings {
     public static let business = renderSettingsIcon(name: "Item List/Icons/Business", backgroundColors: [UIColor(rgb: 0xA95CE3), UIColor(rgb: 0xF16B80)])
     public static let myProfile = renderSettingsIcon(name: "Item List/Icons/Profile", backgroundColors: [colorRed])
     public static let toast: UIImage? = {
-        if let image = UIImage(named: "ToastSlice", in: getAppBundle(), compatibleWith: nil) ?? UIImage(named: "Toast", in: getAppBundle(), compatibleWith: nil) {
-            return generateImage(CGSize(width: 30.0, height: 30.0), rotatedContext: { size, context in
+        if let image = UIImage(named: "ToastFemboy", in: getAppBundle(), compatibleWith: nil) ?? UIImage(named: "Toast", in: getAppBundle(), compatibleWith: nil) ?? UIImage(named: "ToastSlice", in: getAppBundle(), compatibleWith: nil) {
+            return generateImage(CGSize(width: 30.0, height: 30.0), contextGenerator: { size, context in
                 let bounds = CGRect(origin: .zero, size: size)
                 context.clear(bounds)
                 let path = UIBezierPath(roundedRect: bounds, cornerRadius: 8.0)
