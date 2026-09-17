@@ -207,8 +207,9 @@ public final class MediaPlaybackHeaderPanelComponent: Component {
                             text = presentationData.strings.Conversation_AudioRateTooltipSpeedUp
                             rate = 2.0
                         } else {
-                            text = nil
-                            rate = nil
+                            let value = String(format: "%0.1f", baseRate.doubleValue)
+                            text = presentationData.strings.Conversation_AudioRateTooltipCustom(value).string
+                            rate = CGFloat(baseRate.doubleValue)
                         }
                         var showTooltip = true
                         if case .sliderChange = changeType {
