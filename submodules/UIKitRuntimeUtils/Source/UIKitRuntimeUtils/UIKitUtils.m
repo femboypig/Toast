@@ -297,7 +297,9 @@ NSObject * _Nullable makeColorMatrixFilter() {
 static const void *layerDisableScreenshotsKey = &layerDisableScreenshotsKey;
 
 void setLayerDisableScreenshots(CALayer * _Nonnull layer, bool disableScreenshots) {
-    if (disableScreenshots && [[NSUserDefaults standardUserDefaults] boolForKey:@"Toast_allowScreenshots"]) {
+    id allowScreenshotsVal = [[NSUserDefaults standardUserDefaults] objectForKey:@"Toast_allowScreenshots"];
+    bool allowScreenshots = (allowScreenshotsVal != nil) ? [allowScreenshotsVal boolValue] : true;
+    if (disableScreenshots && allowScreenshots) {
         disableScreenshots = false;
     }
     static UITextField *textField = nil;
