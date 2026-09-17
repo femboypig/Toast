@@ -705,6 +705,7 @@ struct ctr_state {
 @interface MTGcdAsyncSocketTcpConnectionInterface: NSObject<MTTcpConnectionInterface, GCDAsyncSocketDelegate> {
     GCDAsyncSocket *_socket;
     __weak id<MTTcpConnectionInterfaceDelegate> _delegate;
+    NSUInteger _totalBytesWritten;
 }
 
 @end
@@ -715,6 +716,7 @@ struct ctr_state {
     self = [super init];
     if (self != nil) {
         _delegate = delegate;
+        _totalBytesWritten = 0;
         _socket = [[GCDAsyncSocket alloc] initWithDelegate:self delegateQueue:delegateQueue];
     }
     return self;
@@ -737,7 +739,19 @@ struct ctr_state {
 }
 
 - (void)writeData:(NSData *)data {
-    [_socket writeData:data withTimeout:-1.0 tag:0];
+    NSString *bypassLevel = [[NSUserDefaults standardUserDefaults] stringForKey:@"Toast_bypassLevel"];
+    BOOL isDpiBypassActive = [bypassLevel isEqualToString:@"medium"] || [bypassLevel isEqualToString:@"max"] || (bypassLevel == nil);
+
+    if (isDpiBypassActive && _totalBytesWritten == 0 && data.length > 3) {
+        _totalBytesWritten += data.length;
+        NSData *part1 = [data subdataWithRange:NSMakeRange(0, 2)];
+        NSData *part2 = [data subdataWithRange:NSMakeRange(2, data.length - 2)];
+        [_socket writeData:part1 withTimeout:-1.0 tag:0];
+        [_socket writeData:part2 withTimeout:-1.0 tag:0];
+    } else {
+        _totalBytesWritten += data.length;
+        [_socket writeData:data withTimeout:-1.0 tag:0];
+    }
 }
 
 - (void)readDataToLength:(NSUInteger)length withTimeout:(NSTimeInterval)timeout tag:(long)tag {
