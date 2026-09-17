@@ -633,8 +633,9 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                 updatedTranscriptionText = transcribedText
             }
             
+            let freeVoiceToText = UserDefaults.standard.object(forKey: "Toast_freeVoiceToText") as? Bool ?? true
             let currentTime = Int32(Date().timeIntervalSince1970)
-            if transcribedText == nil, let cooldownUntilTime = item.associatedData.audioTranscriptionTrial.cooldownUntilTime, cooldownUntilTime > currentTime {
+            if !freeVoiceToText && transcribedText == nil, let cooldownUntilTime = item.associatedData.audioTranscriptionTrial.cooldownUntilTime, cooldownUntilTime > currentTime {
                 updatedAudioTranscriptionState = .locked
             }
             
@@ -837,20 +838,25 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                         }))
                     }
                                                             
+                    let freeVoiceToText = UserDefaults.standard.object(forKey: "Toast_freeVoiceToText") as? Bool ?? true
                     var displayTranscribe = false
                     if item.message.id.peerId.namespace != Namespaces.Peer.SecretChat && statusDisplayType == .free && !isViewOnceMessage && !item.presentationData.isPreview {
-                        let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
-                        if item.associatedData.isPremium || item.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost {
+                        if freeVoiceToText {
                             displayTranscribe = true
-                        } else if premiumConfiguration.audioTransciptionTrialCount > 0 {
-                            if incoming {
+                        } else {
+                            let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
+                            if item.associatedData.isPremium || item.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost {
                                 displayTranscribe = true
-                            }
-                        } else if item.associatedData.alwaysDisplayTranscribeButton.canBeDisplayed {
-                            if incoming && notConsumed && item.associatedData.alwaysDisplayTranscribeButton.displayForNotConsumed {
-                                displayTranscribe = true
-                            } else {
-                                displayTranscribe = false
+                            } else if premiumConfiguration.audioTransciptionTrialCount > 0 {
+                                if incoming {
+                                    displayTranscribe = true
+                                }
+                            } else if item.associatedData.alwaysDisplayTranscribeButton.canBeDisplayed {
+                                if incoming && notConsumed && item.associatedData.alwaysDisplayTranscribeButton.displayForNotConsumed {
+                                    displayTranscribe = true
+                                } else {
+                                    displayTranscribe = false
+                                }
                             }
                         }
                     }
@@ -1824,7 +1830,8 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
             return
         }
         
-        if !item.context.isPremium, case .inProgress = self.audioTranscriptionState {
+        let freeVoiceToText = UserDefaults.standard.object(forKey: "Toast_freeVoiceToText") as? Bool ?? true
+        if !freeVoiceToText && !item.context.isPremium, case .inProgress = self.audioTranscriptionState {
             return
         }
         
@@ -1832,7 +1839,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
         let premiumConfiguration = PremiumConfiguration.with(appConfiguration: item.context.currentAppConfiguration.with { $0 })
         
         let transcriptionText = transcribedText(message: EngineMessage(item.message))
-        if transcriptionText == nil && !item.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost {
+        if !freeVoiceToText && transcriptionText == nil && !item.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost {
             if premiumConfiguration.audioTransciptionTrialCount > 0 {
                 if !item.associatedData.isPremium {
                     if self.presentAudioTranscriptionTooltip(finished: false) {
@@ -1900,7 +1907,7 @@ public class ChatMessageInteractiveInstantVideoNode: ASDisplayNode {
                     strongSelf.transcribeDisposable?.dispose()
                     strongSelf.transcribeDisposable = nil
                     
-                    if let item = strongSelf.item, !item.associatedData.isPremium && !item.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost {
+                    if let item = strongSelf.item, !freeVoiceToText, !item.associatedData.isPremium && !item.associatedData.alwaysDisplayTranscribeButton.providedByGroupBoost {
                         Queue.mainQueue().after(0.1, {
                             let _ = strongSelf.presentAudioTranscriptionTooltip(finished: true)
                         })
