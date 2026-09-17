@@ -83,6 +83,7 @@ public final class ToastSettings {
     private let blockChannelAdsKey = "Toast_blockChannelAds"
     private let sendOriginalMediaKey = "Toast_sendOriginalMedia"
     private let freeVoiceToTextKey = "Toast_freeVoiceToText"
+    private let forwardWithoutQuoteKey = "Toast_forwardWithoutQuote"
 
     private let updatedPromise = ValuePromise<Bool>(true, ignoreRepeated: false)
     public var updated: Signal<Void, NoError> {
@@ -107,7 +108,8 @@ public final class ToastSettings {
             self.showAvatarsInDirectChatsKey: true,
             self.blockChannelAdsKey: true,
             self.sendOriginalMediaKey: false,
-            self.freeVoiceToTextKey: true
+            self.freeVoiceToTextKey: true,
+            self.forwardWithoutQuoteKey: false
         ])
     }
 
@@ -304,6 +306,16 @@ public final class ToastSettings {
         }
     }
 
+    public var forwardWithoutQuote: Bool {
+        get {
+            return self.defaults.object(forKey: self.forwardWithoutQuoteKey) as? Bool ?? false
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.forwardWithoutQuoteKey)
+            self.updatedPromise.set(true)
+        }
+    }
+
     public func resetToDefaults() {
         self.saveDisappearingMedia = true
         self.allowScreenshots = true
@@ -323,6 +335,7 @@ public final class ToastSettings {
         self.blockChannelAds = true
         self.sendOriginalMedia = false
         self.freeVoiceToText = true
+        self.forwardWithoutQuote = false
         self.updatedPromise.set(true)
     }
 }
