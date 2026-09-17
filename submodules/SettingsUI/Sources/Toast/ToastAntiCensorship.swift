@@ -3,6 +3,9 @@ import UIKit
 import SwiftSignalKit
 import TelegramCore
 import Postbox
+#if canImport(Darwin)
+import Darwin
+#endif
 
 private func hexStringToData(_ hex: String) -> Data? {
     var data = Data(capacity: hex.count / 2)
@@ -20,20 +23,6 @@ private func hexStringToData(_ hex: String) -> Data? {
     return data
 }
 
-private extension fd_set {
-    mutating func zero() {
-        self = fd_set()
-    }
-    mutating func set(_ fd: Int32) {
-        let intOffset = Int(fd / 32)
-        let bitOffset = fd % 32
-        withUnsafeMutablePointer(to: &self) { ptr in
-            let rawPtr = UnsafeMutableRawPointer(ptr).assumingMemoryBound(to: Int32.self)
-            rawPtr[intOffset] |= (1 << bitOffset)
-        }
-    }
-}
-
 public final class ToastAntiCensorship {
     public static let shared = ToastAntiCensorship()
 
@@ -46,39 +35,33 @@ public final class ToastAntiCensorship {
         let host: String
         let port: Int32
         let secretHex: String
-        let tag: String
     }
 
     private let defaultProxies: [BuiltInProxy] = [
         BuiltInProxy(
             host: "149.154.175.50",
             port: 443,
-            secretHex: "ee000000000000000000000000000000007777772e676f6f676c652e636f6d",
-            tag: "Toast_BuiltIn_Google"
+            secretHex: "ee000000000000000000000000000000007777772e676f6f676c652e636f6d"
         ),
         BuiltInProxy(
             host: "91.108.56.170",
             port: 443,
-            secretHex: "ee000000000000000000000000000000007777772e636c6f7564666c6172652e636f6d",
-            tag: "Toast_BuiltIn_Cloudflare"
+            secretHex: "ee000000000000000000000000000000007777772e636c6f7564666c6172652e636f6d"
         ),
         BuiltInProxy(
             host: "149.154.167.51",
             port: 443,
-            secretHex: "ee0000000000000000000000000000000079616e6465782e7275",
-            tag: "Toast_BuiltIn_Yandex"
+            secretHex: "ee0000000000000000000000000000000079616e6465782e7275"
         ),
         BuiltInProxy(
             host: "91.108.4.155",
             port: 443,
-            secretHex: "ee000000000000000000000000000000007777772e6d6963726f736f66742e636f6d",
-            tag: "Toast_BuiltIn_Microsoft"
+            secretHex: "ee000000000000000000000000000000007777772e6d6963726f736f66742e636f6d"
         ),
         BuiltInProxy(
             host: "91.108.8.10",
             port: 443,
-            secretHex: "ee000000000000000000000000000000007777772e6170706c652e636f6d",
-            tag: "Toast_BuiltIn_Apple"
+            secretHex: "ee000000000000000000000000000000007777772e6170706c652e636f6d"
         )
     ]
 
@@ -95,7 +78,7 @@ public final class ToastAntiCensorship {
             guard let accountManager = self.accountManager else { return }
 
             if level == .max {
-                self.performHealthCheckAndFailover(force: false)
+                self.performHealthCheckAndFailover()
             } else {
                 // Disable built-in proxy if active
                 let _ = updateProxySettingsInteractively(accountManager: accountManager, { current in
@@ -118,12 +101,12 @@ public final class ToastAntiCensorship {
             let now = CFAbsoluteTimeGetCurrent()
             if now - self.lastFailoverTime > 10.0 {
                 self.lastFailoverTime = now
-                self.performHealthCheckAndFailover(force: true)
+                self.performHealthCheckAndFailover()
             }
         }
     }
 
-    private func performHealthCheckAndFailover(force: Bool) {
+    private func performHealthCheckAndFailover() {
         guard !self.isChecking else { return }
         self.isChecking = true
 
@@ -205,13 +188,9 @@ public final class ToastAntiCensorship {
                 return
             }
 
-            var fdSet = fd_set()
-            fdSet.zero()
-            fdSet.set(sock)
-            var tv = timeval(tv_sec: 1, tv_usec: 500000) // 1.5 seconds
-
-            let selectRes = select(sock + 1, nil, &fdSet, nil, &tv)
-            if selectRes > 0 {
+            var pfd = pollfd(fd: sock, events: Int16(POLLOUT), revents: 0)
+            let pollRes = poll(&pfd, 1, 1500)
+            if pollRes > 0 && (pfd.revents & Int16(POLLOUT)) != 0 {
                 var err: Int32 = 0
                 var len = socklen_t(MemoryLayout<Int32>.size)
                 getsockopt(sock, SOL_SOCKET, SO_ERROR, &err, &len)
