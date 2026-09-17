@@ -41,23 +41,18 @@ private func transcribeAudio(path: String, locale: String) -> Signal<Transcripti
                             speechRecognizerValue.defaultTaskHint = .dictation
                             sharedRecognizers[locale] = speechRecognizerValue
                             speechRecognizer = speechRecognizerValue
-                            
-                            if locale == "en-US" {
-                                speechRecognizer.supportsOnDeviceRecognition = true
-                            } else {
-                                speechRecognizer.supportsOnDeviceRecognition = false
-                            }
-                            speechRecognizer.supportsOnDeviceRecognition = true
                         }
                         
-                        let tempFilePath = NSTemporaryDirectory() + "/\(UInt64.random(in: 0 ... UInt64.max)).m4a"
+                        let ext = (path as NSString).pathExtension.lowercased()
+                        let targetExt = ext.isEmpty ? "m4a" : ext
+                        let tempFilePath = NSTemporaryDirectory() + "/\(UInt64.random(in: 0 ... UInt64.max)).\(targetExt)"
                         let _ = try? FileManager.default.copyItem(atPath: path, toPath: tempFilePath)
                         
                         let request = SFSpeechURLRecognitionRequest(url: URL(fileURLWithPath: tempFilePath))
                         if #available(iOS 16.0, *) {
                             request.addsPunctuation = true
                         }
-                        request.requiresOnDeviceRecognition = speechRecognizer.supportsOnDeviceRecognition
+                        request.requiresOnDeviceRecognition = false
                         request.shouldReportPartialResults = false
                         
                         let task = speechRecognizer.recognitionTask(with: request, resultHandler: { result, error in
@@ -107,10 +102,29 @@ public struct LocallyTranscribedAudio {
 public func transcribeAudio(path: String, appLocale: String) -> Signal<LocallyTranscribedAudio?, NoError> {
     var signals: [Signal<TranscriptionResult?, NoError>] = []
     var locales: [String] = []
-    if !locales.contains(Locale.current.identifier) {
-        locales.append(Locale.current.identifier)
+    let currentLocaleId = Locale.current.identifier
+    if !locales.contains(currentLocaleId) {
+        locales.append(currentLocaleId)
     }
-    if locales.isEmpty {
+    for preferredLang in Locale.preferredLanguages.prefix(3) {
+        let normalized = preferredLang.replacingOccurrences(of: "_", with: "-")
+        if !locales.contains(normalized) {
+            locales.append(normalized)
+        }
+    }
+    if !appLocale.isEmpty {
+        let normalized = appLocale.replacingOccurrences(of: "_", with: "-")
+        if !locales.contains(normalized) {
+            locales.append(normalized)
+        }
+        if normalized == "ru" && !locales.contains("ru-RU") {
+            locales.append("ru-RU")
+        }
+    }
+    if !locales.contains("ru-RU") {
+        locales.append("ru-RU")
+    }
+    if !locales.contains("en-US") {
         locales.append("en-US")
     }
     for locale in locales {
