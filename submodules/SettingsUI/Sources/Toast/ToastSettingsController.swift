@@ -8,6 +8,7 @@ import ItemListUI
 import PresentationDataUtils
 import AccountContext
 import AlertUI
+import PasscodeUI
 
 private final class ToastSettingsControllerArguments {
     let context: AccountContext
@@ -19,6 +20,9 @@ private final class ToastSettingsControllerArguments {
     let toggleSendOriginalMedia: (Bool) -> Void
     let toggleFreeVoiceToText: (Bool) -> Void
     let toggleForwardWithoutQuote: (Bool) -> Void
+    let toggleFakePasscodeEnabled: (Bool) -> Void
+    let openFakePasscodeSetup: () -> Void
+    let toggleDecoyChannelsOnly: (Bool) -> Void
     let toggleVoiceChangerEnabled: (Bool) -> Void
     let updateVoiceChangerPitch: (Float) -> Void
     let updateVoiceChangerEcho: (Float) -> Void
@@ -43,6 +47,9 @@ private final class ToastSettingsControllerArguments {
         toggleSendOriginalMedia: @escaping (Bool) -> Void,
         toggleFreeVoiceToText: @escaping (Bool) -> Void,
         toggleForwardWithoutQuote: @escaping (Bool) -> Void,
+        toggleFakePasscodeEnabled: @escaping (Bool) -> Void,
+        openFakePasscodeSetup: @escaping () -> Void,
+        toggleDecoyChannelsOnly: @escaping (Bool) -> Void,
         toggleVoiceChangerEnabled: @escaping (Bool) -> Void,
         updateVoiceChangerPitch: @escaping (Float) -> Void,
         updateVoiceChangerEcho: @escaping (Float) -> Void,
@@ -66,6 +73,9 @@ private final class ToastSettingsControllerArguments {
         self.toggleSendOriginalMedia = toggleSendOriginalMedia
         self.toggleFreeVoiceToText = toggleFreeVoiceToText
         self.toggleForwardWithoutQuote = toggleForwardWithoutQuote
+        self.toggleFakePasscodeEnabled = toggleFakePasscodeEnabled
+        self.openFakePasscodeSetup = openFakePasscodeSetup
+        self.toggleDecoyChannelsOnly = toggleDecoyChannelsOnly
         self.toggleVoiceChangerEnabled = toggleVoiceChangerEnabled
         self.updateVoiceChangerPitch = updateVoiceChangerPitch
         self.updateVoiceChangerEcho = updateVoiceChangerEcho
@@ -84,6 +94,7 @@ private final class ToastSettingsControllerArguments {
 
 private enum ToastSettingsSection: ItemListSectionId {
     case mediaPrivacy
+    case fakePasscode
     case voiceChanger
     case censorship
     case background
@@ -109,6 +120,12 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
     case freeVoiceToTextInfo(String)
     case forwardWithoutQuote(String, Bool)
     case forwardWithoutQuoteInfo(String)
+
+    case fakePasscodeHeader(String)
+    case fakePasscodeEnabled(String, Bool)
+    case fakePasscodeSetup(String, String)
+    case decoyChannelsOnly(String, Bool)
+    case fakePasscodeInfo(String)
 
     case voiceChangerHeader(String)
     case voiceChangerEnabled(String, Bool)
@@ -141,6 +158,8 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
         switch self {
         case .mediaPrivacyHeader, .saveDisappearingMedia, .saveDisappearingMediaInfo, .allowScreenshots, .allowScreenshotsInfo, .allowSavingProtectedContent, .allowSavingProtectedContentInfo, .showAvatarsInDirect, .showAvatarsInDirectInfo, .blockChannelAds, .blockChannelAdsInfo, .sendOriginalMedia, .sendOriginalMediaInfo, .freeVoiceToText, .freeVoiceToTextInfo, .forwardWithoutQuote, .forwardWithoutQuoteInfo:
             return ToastSettingsSection.mediaPrivacy.rawValue
+        case .fakePasscodeHeader, .fakePasscodeEnabled, .fakePasscodeSetup, .decoyChannelsOnly, .fakePasscodeInfo:
+            return ToastSettingsSection.fakePasscode.rawValue
         case .voiceChangerHeader, .voiceChangerEnabled, .voiceChangerPitch, .voiceChangerEcho, .voiceChangerReverb, .voiceChangerRobot, .voiceChangerBass, .voiceChangerDistortion, .voiceChangerReset, .voiceChangerInfo:
             return ToastSettingsSection.voiceChanger.rawValue
         case .censorshipHeader, .censorshipLevel, .censorshipInfo:
@@ -190,50 +209,60 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
             return 15
         case .forwardWithoutQuoteInfo:
             return 16
-        case .voiceChangerHeader:
+        case .fakePasscodeHeader:
             return 20
-        case .voiceChangerEnabled:
+        case .fakePasscodeEnabled:
             return 21
-        case .voiceChangerPitch:
+        case .fakePasscodeSetup:
             return 22
-        case .voiceChangerEcho:
+        case .decoyChannelsOnly:
             return 23
-        case .voiceChangerReverb:
+        case .fakePasscodeInfo:
             return 24
-        case .voiceChangerRobot:
-            return 25
-        case .voiceChangerBass:
-            return 26
-        case .voiceChangerDistortion:
-            return 27
-        case .voiceChangerReset:
-            return 28
-        case .voiceChangerInfo:
-            return 29
-        case .censorshipHeader:
+        case .voiceChangerHeader:
             return 30
-        case .censorshipLevel:
+        case .voiceChangerEnabled:
             return 31
-        case .censorshipInfo:
+        case .voiceChangerPitch:
             return 32
-        case .backgroundHeader:
+        case .voiceChangerEcho:
+            return 33
+        case .voiceChangerReverb:
+            return 34
+        case .voiceChangerRobot:
+            return 35
+        case .voiceChangerBass:
+            return 36
+        case .voiceChangerDistortion:
+            return 37
+        case .voiceChangerReset:
+            return 38
+        case .voiceChangerInfo:
+            return 39
+        case .censorshipHeader:
             return 40
-        case .backgroundKeepAlive:
+        case .censorshipLevel:
             return 41
-        case .backgroundKeepAliveInfo:
+        case .censorshipInfo:
             return 42
-        case .localNotifications:
-            return 43
-        case .localNotificationsInfo:
-            return 44
-        case .iconsHeader:
+        case .backgroundHeader:
             return 50
-        case .iconsDisclosure:
+        case .backgroundKeepAlive:
             return 51
-        case .iconsInfo:
+        case .backgroundKeepAliveInfo:
             return 52
-        case .reset:
+        case .localNotifications:
+            return 53
+        case .localNotificationsInfo:
+            return 54
+        case .iconsHeader:
             return 60
+        case .iconsDisclosure:
+            return 61
+        case .iconsInfo:
+            return 62
+        case .reset:
+            return 70
         }
     }
 
@@ -293,6 +322,23 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
                 args.toggleForwardWithoutQuote(value)
             })
         case let .forwardWithoutQuoteInfo(text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+
+        case let .fakePasscodeHeader(text):
+            return ItemListSectionHeaderItem(presentationData: presentationData, text: text, sectionId: self.section)
+        case let .fakePasscodeEnabled(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                args.toggleFakePasscodeEnabled(value)
+            })
+        case let .fakePasscodeSetup(title, value):
+            return ItemListDisclosureItem(presentationData: presentationData, title: title, label: value, sectionId: self.section, style: .blocks, action: {
+                args.openFakePasscodeSetup()
+            })
+        case let .decoyChannelsOnly(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                args.toggleDecoyChannelsOnly(value)
+            })
+        case let .fakePasscodeInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
 
         case let .voiceChangerHeader(text):
@@ -448,6 +494,15 @@ private func toastSettingsEntries(settings: ToastSettings) -> [ToastSettingsEntr
     entries.append(.forwardWithoutQuote("Forward Without Quote", settings.forwardWithoutQuote))
     entries.append(.forwardWithoutQuoteInfo("Automatically removes sender name and forward attribution when forwarding messages."))
 
+    entries.append(.fakePasscodeHeader("DECOY PASSCODE / ДВОЙНОЕ ДНО"))
+    entries.append(.fakePasscodeEnabled("Enable Decoy Passcode", settings.fakePasscodeEnabled))
+    if settings.fakePasscodeEnabled {
+        let passcodeLabel = settings.fakePasscode.isEmpty ? "Not Set" : "••••"
+        entries.append(.fakePasscodeSetup("Decoy Passcode", passcodeLabel))
+        entries.append(.decoyChannelsOnly("Channels & Groups Only", settings.decoyChannelsOnly))
+    }
+    entries.append(.fakePasscodeInfo("When unlocked with the decoy passcode, Telegram opens into a sanitized decoy mode hiding secret chats, private dialogues, and sensitive content."))
+
     entries.append(.voiceChangerHeader("VOICE CHANGER"))
     entries.append(.voiceChangerEnabled("Enable Voice Changer", settings.voiceChangerEnabled))
     if settings.voiceChangerEnabled {
@@ -515,6 +570,7 @@ private func toastSettingsEntries(settings: ToastSettings) -> [ToastSettingsEntr
 public func toastSettingsController(context: AccountContext) -> ViewController {
     var pushControllerImpl: ((ViewController) -> Void)?
     var presentControllerImpl: ((ViewController, Any?) -> Void)?
+    var popControllerImpl: (() -> Void)?
 
     let arguments = ToastSettingsControllerArguments(
         context: context,
@@ -541,6 +597,74 @@ public func toastSettingsController(context: AccountContext) -> ViewController {
         },
         toggleForwardWithoutQuote: { value in
             ToastSettings.shared.forwardWithoutQuote = value
+        },
+        toggleFakePasscodeEnabled: { value in
+            ToastSettings.shared.fakePasscodeEnabled = value
+            if value && ToastSettings.shared.fakePasscode.isEmpty {
+                let setupController = PasscodeSetupController(context: context, mode: .setup(change: false, .digits4))
+                setupController.title = "Decoy Passcode"
+                setupController.complete = { [weak setupController] passcode, _ in
+                    ToastSettings.shared.fakePasscode = passcode
+                    (setupController?.navigationController as? NavigationController)?.popViewController(animated: true) ?? popControllerImpl?()
+                }
+                pushControllerImpl?(setupController)
+            }
+        },
+        openFakePasscodeSetup: {
+            let currentPasscode = ToastSettings.shared.fakePasscode
+            let fieldType: PasscodeEntryFieldType
+            if currentPasscode.count == 6 && currentPasscode.allSatisfy({ $0.isNumber }) {
+                fieldType = .digits6
+            } else if currentPasscode.count == 4 && currentPasscode.allSatisfy({ $0.isNumber }) {
+                fieldType = .digits4
+            } else if !currentPasscode.isEmpty {
+                fieldType = .alphanumeric
+            } else {
+                fieldType = .digits4
+            }
+            if currentPasscode.isEmpty {
+                let setupController = PasscodeSetupController(context: context, mode: .setup(change: false, fieldType))
+                setupController.title = "Decoy Passcode"
+                setupController.complete = { [weak setupController] passcode, _ in
+                    ToastSettings.shared.fakePasscode = passcode
+                    ToastSettings.shared.fakePasscodeEnabled = true
+                    (setupController?.navigationController as? NavigationController)?.popViewController(animated: true) ?? popControllerImpl?()
+                }
+                pushControllerImpl?(setupController)
+            } else {
+                let presentationData = context.sharedContext.currentPresentationData.with { $0 }
+                let actionSheet = ActionSheetController(presentationData: presentationData)
+                var items: [ActionSheetItem] = [
+                    ActionSheetTextItem(title: "Decoy Passcode / Двойное дно")
+                ]
+                items.append(ActionSheetButtonItem(title: "Change Passcode", color: .accent, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    let setupController = PasscodeSetupController(context: context, mode: .setup(change: true, fieldType))
+                    setupController.title = "Decoy Passcode"
+                    setupController.complete = { [weak setupController] passcode, _ in
+                        ToastSettings.shared.fakePasscode = passcode
+                        (setupController?.navigationController as? NavigationController)?.popViewController(animated: true) ?? popControllerImpl?()
+                    }
+                    pushControllerImpl?(setupController)
+                }))
+                items.append(ActionSheetButtonItem(title: "Turn Off Decoy Passcode", color: .destructive, action: { [weak actionSheet] in
+                    actionSheet?.dismissAnimated()
+                    ToastSettings.shared.fakePasscode = ""
+                    ToastSettings.shared.fakePasscodeEnabled = false
+                }))
+                actionSheet.setItemGroups([
+                    ActionSheetItemGroup(items: items),
+                    ActionSheetItemGroup(items: [
+                        ActionSheetButtonItem(title: presentationData.strings.Common_Cancel, color: .accent, font: .bold, action: { [weak actionSheet] in
+                            actionSheet?.dismissAnimated()
+                        })
+                    ])
+                ])
+                presentControllerImpl?(actionSheet, nil)
+            }
+        },
+        toggleDecoyChannelsOnly: { value in
+            ToastSettings.shared.decoyChannelsOnly = value
         },
         toggleVoiceChangerEnabled: { value in
             ToastSettings.shared.voiceChangerEnabled = value
@@ -651,6 +775,9 @@ public func toastSettingsController(context: AccountContext) -> ViewController {
     }
     presentControllerImpl = { [weak controller] c, a in
         controller?.present(c, in: .window(.root), with: a)
+    }
+    popControllerImpl = { [weak controller] in
+        (controller?.navigationController as? NavigationController)?.popViewController(animated: true)
     }
     return controller
 }
