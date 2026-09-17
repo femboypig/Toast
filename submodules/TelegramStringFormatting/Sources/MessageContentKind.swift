@@ -340,6 +340,14 @@ public func mediaContentKind(_ media: EngineMedia, message: EngineMessage? = nil
             return .image
         }
     case let .file(file):
+        if file.isSticker || file.isVideoSticker || file.isAnimatedSticker {
+            for attribute in file.attributes {
+                if case let .Sticker(text, _, _) = attribute {
+                    return .sticker(text)
+                }
+            }
+            return .sticker("")
+        }
         var fileName: String = ""
         
         var result: MessageContentKind?
