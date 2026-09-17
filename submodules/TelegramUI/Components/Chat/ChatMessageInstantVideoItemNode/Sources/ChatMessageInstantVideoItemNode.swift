@@ -308,7 +308,8 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
             
             do {
                 if messagePeerId != item.context.account.peerId {
-                    if messagePeerId.isGroupOrChannel && item.message.author != nil {
+                    let showAvatarsInDirect = UserDefaults.standard.object(forKey: "Toast_showAvatarsInDirectChats") as? Bool ?? true
+                    if (messagePeerId.isGroupOrChannel || showAvatarsInDirect) && (item.message.author != nil || item.message.peers[item.message.id.peerId] != nil) {
                         var isBroadcastChannel = false
                         if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case .broadcast = peer.info {
                             isBroadcastChannel = true
@@ -319,7 +320,7 @@ public class ChatMessageInstantVideoItemNode: ChatMessageItemView, ASGestureReco
                         }
                         
                         if !isBroadcastChannel {
-                            hasAvatar = true
+                            hasAvatar = incoming
                         } else if case .customChatContents = item.chatLocation {
                             hasAvatar = false
                         }
