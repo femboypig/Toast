@@ -146,16 +146,28 @@ public final class PasscodeEntryController: ViewController {
             }
     
             var succeed = false
-            switch strongSelf.challengeData {
-                case .none:
-                    succeed = true
-                case let .numericalPassword(code):
-                    succeed = passcode == normalizeArabicNumeralString(code, type: .western)
-                case let .plaintextPassword(code):
-                    succeed = passcode == code
+            var isFakePasscode = false
+            let fakePasscode = UserDefaults.standard.string(forKey: "Toast_fakePasscode") ?? ""
+            let fakePasscodeEnabled = UserDefaults.standard.bool(forKey: "Toast_fakePasscodeEnabled")
+            
+            if fakePasscodeEnabled && !fakePasscode.isEmpty && (passcode == fakePasscode || passcode == normalizeArabicNumeralString(fakePasscode, type: .western)) {
+                succeed = true
+                isFakePasscode = true
+            } else {
+                switch strongSelf.challengeData {
+                    case .none:
+                        succeed = true
+                    case let .numericalPassword(code):
+                        succeed = passcode == normalizeArabicNumeralString(code, type: .western)
+                    case let .plaintextPassword(code):
+                        succeed = passcode == code
+                }
             }
             
             if succeed {
+                UserDefaults.standard.set(isFakePasscode, forKey: "Toast_isDecoyActive")
+                UserDefaults.standard.synchronize()
+                
                 if let completed = strongSelf.completed {
                     completed()
                 } else {
