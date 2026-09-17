@@ -3,6 +3,7 @@ import SwiftSignalKit
 
 public enum ToastVoiceChangerMode: String, CaseIterable {
     case off = "off"
+    case custom = "custom"
     case femboy = "femboy"
     case deep = "deep"
     case helium = "helium"
@@ -12,6 +13,8 @@ public enum ToastVoiceChangerMode: String, CaseIterable {
         switch self {
         case .off:
             return "Original"
+        case .custom:
+            return "Custom"
         case .femboy:
             return "Femboy"
         case .deep:
@@ -32,6 +35,9 @@ public final class ToastSettings {
     private let saveDisappearingMediaKey = "Toast_saveDisappearingMedia"
     private let allowScreenshotsKey = "Toast_allowScreenshots"
     private let allowSavingProtectedContentKey = "Toast_allowSavingProtectedContent"
+    private let voiceChangerEnabledKey = "Toast_voiceChangerEnabled"
+    private let voiceChangerPitchKey = "Toast_voiceChangerPitch"
+    private let voiceChangerEchoKey = "Toast_voiceChangerEcho"
     private let voiceChangerModeKey = "Toast_voiceChangerMode"
     private let backgroundKeepAliveKey = "Toast_backgroundKeepAlive"
     private let localNotificationsEnabledKey = "Toast_localNotificationsEnabled"
@@ -42,17 +48,21 @@ public final class ToastSettings {
     }
 
     private init() {
-        if self.defaults.object(forKey: self.backgroundKeepAliveKey) == nil {
-            self.defaults.set(true, forKey: self.backgroundKeepAliveKey)
-        }
-        if self.defaults.object(forKey: self.localNotificationsEnabledKey) == nil {
-            self.defaults.set(true, forKey: self.localNotificationsEnabledKey)
-        }
+        self.defaults.register(defaults: [
+            self.saveDisappearingMediaKey: true,
+            self.allowScreenshotsKey: true,
+            self.allowSavingProtectedContentKey: true,
+            self.voiceChangerEnabledKey: false,
+            self.voiceChangerPitchKey: Float(0.0),
+            self.voiceChangerEchoKey: Float(0.0),
+            self.backgroundKeepAliveKey: true,
+            self.localNotificationsEnabledKey: true
+        ])
     }
 
     public var saveDisappearingMedia: Bool {
         get {
-            return self.defaults.bool(forKey: self.saveDisappearingMediaKey)
+            return self.defaults.object(forKey: self.saveDisappearingMediaKey) as? Bool ?? true
         }
         set {
             self.defaults.set(newValue, forKey: self.saveDisappearingMediaKey)
@@ -62,7 +72,7 @@ public final class ToastSettings {
 
     public var allowScreenshots: Bool {
         get {
-            return self.defaults.bool(forKey: self.allowScreenshotsKey)
+            return self.defaults.object(forKey: self.allowScreenshotsKey) as? Bool ?? true
         }
         set {
             self.defaults.set(newValue, forKey: self.allowScreenshotsKey)
@@ -72,7 +82,7 @@ public final class ToastSettings {
 
     public var allowSavingProtectedContent: Bool {
         get {
-            return self.defaults.bool(forKey: self.allowSavingProtectedContentKey)
+            return self.defaults.object(forKey: self.allowSavingProtectedContentKey) as? Bool ?? true
         }
         set {
             self.defaults.set(newValue, forKey: self.allowSavingProtectedContentKey)
@@ -80,23 +90,57 @@ public final class ToastSettings {
         }
     }
 
+    public var voiceChangerEnabled: Bool {
+        get {
+            return self.defaults.object(forKey: self.voiceChangerEnabledKey) as? Bool ?? false
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.voiceChangerEnabledKey)
+            self.updatedPromise.set(true)
+        }
+    }
+
+    public var voiceChangerPitch: Float {
+        get {
+            return self.defaults.object(forKey: self.voiceChangerPitchKey) as? Float ?? 0.0
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.voiceChangerPitchKey)
+            self.updatedPromise.set(true)
+        }
+    }
+
+    public var voiceChangerEcho: Float {
+        get {
+            return self.defaults.object(forKey: self.voiceChangerEchoKey) as? Float ?? 0.0
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.voiceChangerEchoKey)
+            self.updatedPromise.set(true)
+        }
+    }
+
     public var voiceChangerMode: ToastVoiceChangerMode {
         get {
+            if !self.voiceChangerEnabled {
+                return .off
+            }
             if let rawValue = self.defaults.string(forKey: self.voiceChangerModeKey),
                let mode = ToastVoiceChangerMode(rawValue: rawValue) {
                 return mode
             }
-            return .off
+            return .custom
         }
         set {
             self.defaults.set(newValue.rawValue, forKey: self.voiceChangerModeKey)
+            self.voiceChangerEnabled = (newValue != .off)
             self.updatedPromise.set(true)
         }
     }
 
     public var backgroundKeepAlive: Bool {
         get {
-            return self.defaults.bool(forKey: self.backgroundKeepAliveKey)
+            return self.defaults.object(forKey: self.backgroundKeepAliveKey) as? Bool ?? true
         }
         set {
             self.defaults.set(newValue, forKey: self.backgroundKeepAliveKey)
@@ -106,7 +150,7 @@ public final class ToastSettings {
 
     public var localNotificationsEnabled: Bool {
         get {
-            return self.defaults.bool(forKey: self.localNotificationsEnabledKey)
+            return self.defaults.object(forKey: self.localNotificationsEnabledKey) as? Bool ?? true
         }
         set {
             self.defaults.set(newValue, forKey: self.localNotificationsEnabledKey)
@@ -115,9 +159,12 @@ public final class ToastSettings {
     }
 
     public func resetToDefaults() {
-        self.saveDisappearingMedia = false
-        self.allowScreenshots = false
-        self.allowSavingProtectedContent = false
+        self.saveDisappearingMedia = true
+        self.allowScreenshots = true
+        self.allowSavingProtectedContent = true
+        self.voiceChangerEnabled = false
+        self.voiceChangerPitch = 0.0
+        self.voiceChangerEcho = 0.0
         self.voiceChangerMode = .off
         self.backgroundKeepAlive = true
         self.localNotificationsEnabled = true
