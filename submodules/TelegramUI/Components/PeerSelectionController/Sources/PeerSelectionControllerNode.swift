@@ -422,7 +422,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
         }, forwardMessages: { _ in
         }, updateForwardOptionsState: { [weak self] f in
             if let strongSelf = self {
-                strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardOptionsState(f($0.forwardOptionsState ?? ChatInterfaceForwardOptionsState(hideNames: false, hideCaptions: false, unhideNamesOnCaptionChange: false))) }) })
+                let forwardWithoutQuote = UserDefaults.standard.object(forKey: "Toast_forwardWithoutQuote") as? Bool ?? false
+                strongSelf.updateChatPresentationInterfaceState(animated: true, { $0.updatedInterfaceState({ $0.withUpdatedForwardOptionsState(f($0.forwardOptionsState ?? ChatInterfaceForwardOptionsState(hideNames: forwardWithoutQuote, hideCaptions: false, unhideNamesOnCaptionChange: false))) }) })
             }
         }, presentForwardOptions: { [weak self] sourceNode in
             guard let strongSelf = self else  {
@@ -436,7 +437,8 @@ final class PeerSelectionControllerNode: ASDisplayNode {
             let forwardOptions: Signal<ChatControllerSubject.ForwardOptions, NoError>
             forwardOptions = strongSelf.presentationInterfaceStatePromise.get()
             |> map { state -> ChatControllerSubject.ForwardOptions in
-                return ChatControllerSubject.ForwardOptions(hideNames: state.interfaceState.forwardOptionsState?.hideNames ?? false, hideCaptions: state.interfaceState.forwardOptionsState?.hideCaptions ?? false)
+                let forwardWithoutQuote = UserDefaults.standard.object(forKey: "Toast_forwardWithoutQuote") as? Bool ?? false
+                return ChatControllerSubject.ForwardOptions(hideNames: state.interfaceState.forwardOptionsState?.hideNames ?? forwardWithoutQuote, hideCaptions: state.interfaceState.forwardOptionsState?.hideCaptions ?? false)
             }
             |> distinctUntilChanged
 
