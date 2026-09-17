@@ -30,15 +30,21 @@ func _internal_markMessageContentAsConsumedInteractively(postbox: Postbox, messa
                                     var globallyUniqueIds: [Int64] = []
                                     if let globallyUniqueId = message.globallyUniqueId {
                                         globallyUniqueIds.append(globallyUniqueId)
-                                        let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: message.id.peerId, operation: SecretChatOutgoingOperationContents.readMessagesContent(layer: layer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), globallyUniqueIds: globallyUniqueIds), state: state)
-                                        if updatedState != state {
-                                            transaction.setPeerChatState(message.id.peerId, state: updatedState)
+                                        let saveDisappearing = UserDefaults.standard.object(forKey: "Toast_saveDisappearingMedia") as? Bool ?? true
+                                        if !saveDisappearing || !message.containsSecretMedia {
+                                            let updatedState = addSecretChatOutgoingOperation(transaction: transaction, peerId: message.id.peerId, operation: SecretChatOutgoingOperationContents.readMessagesContent(layer: layer, actionGloballyUniqueId: Int64.random(in: Int64.min ... Int64.max), globallyUniqueIds: globallyUniqueIds), state: state)
+                                            if updatedState != state {
+                                                transaction.setPeerChatState(message.id.peerId, state: updatedState)
+                                            }
                                         }
                                     }
                                 }
                             }
                         } else {
-                            addSynchronizeConsumeMessageContentsOperation(transaction: transaction, messageIds: [message.id])
+                            let saveDisappearing = UserDefaults.standard.object(forKey: "Toast_saveDisappearingMedia") as? Bool ?? true
+                            if !saveDisappearing || !message.containsSecretMedia {
+                                addSynchronizeConsumeMessageContentsOperation(transaction: transaction, messageIds: [message.id])
+                            }
                         }
                     }
                 } else if let attribute = updatedAttributes[i] as? ConsumablePersonalMentionMessageAttribute, !attribute.consumed {
