@@ -84,6 +84,10 @@ public final class ToastSettings {
     private let sendOriginalMediaKey = "Toast_sendOriginalMedia"
     private let freeVoiceToTextKey = "Toast_freeVoiceToText"
     private let forwardWithoutQuoteKey = "Toast_forwardWithoutQuote"
+    private let fakePasscodeEnabledKey = "Toast_fakePasscodeEnabled"
+    private let fakePasscodeKey = "Toast_fakePasscode"
+    private let decoyChannelsOnlyKey = "Toast_decoyChannelsOnly"
+    private let isDecoyActiveKey = "Toast_isDecoyActive"
 
     private let updatedPromise = ValuePromise<Bool>(true, ignoreRepeated: false)
     public var updated: Signal<Void, NoError> {
@@ -109,7 +113,11 @@ public final class ToastSettings {
             self.blockChannelAdsKey: true,
             self.sendOriginalMediaKey: false,
             self.freeVoiceToTextKey: true,
-            self.forwardWithoutQuoteKey: false
+            self.forwardWithoutQuoteKey: false,
+            self.fakePasscodeEnabledKey: false,
+            self.fakePasscodeKey: "",
+            self.decoyChannelsOnlyKey: true,
+            self.isDecoyActiveKey: false
         ])
     }
 
@@ -316,6 +324,46 @@ public final class ToastSettings {
         }
     }
 
+    public var fakePasscodeEnabled: Bool {
+        get {
+            return self.defaults.object(forKey: self.fakePasscodeEnabledKey) as? Bool ?? false
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.fakePasscodeEnabledKey)
+            self.updatedPromise.set(true)
+        }
+    }
+
+    public var fakePasscode: String {
+        get {
+            return self.defaults.string(forKey: self.fakePasscodeKey) ?? ""
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.fakePasscodeKey)
+            self.updatedPromise.set(true)
+        }
+    }
+
+    public var decoyChannelsOnly: Bool {
+        get {
+            return self.defaults.object(forKey: self.decoyChannelsOnlyKey) as? Bool ?? true
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.decoyChannelsOnlyKey)
+            self.updatedPromise.set(true)
+        }
+    }
+
+    public var isDecoyActive: Bool {
+        get {
+            return self.defaults.bool(forKey: self.isDecoyActiveKey)
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.isDecoyActiveKey)
+            self.updatedPromise.set(true)
+        }
+    }
+
     public func resetToDefaults() {
         self.saveDisappearingMedia = true
         self.allowScreenshots = true
@@ -336,6 +384,10 @@ public final class ToastSettings {
         self.sendOriginalMedia = false
         self.freeVoiceToText = true
         self.forwardWithoutQuote = false
+        self.fakePasscodeEnabled = false
+        self.fakePasscode = ""
+        self.decoyChannelsOnly = true
+        self.isDecoyActive = false
         self.updatedPromise.set(true)
     }
 }
