@@ -124,16 +124,22 @@ jobs:
           xcrun --show-sdk-path --sdk iphoneos || true
           xcrun --show-sdk-build-version --sdk iphonesimulator || true
 
-          sudo xcodebuild -downloadPlatform iOS || true
-          killall -9 com.apple.CoreSimulator.CoreSimulatorService 2>/dev/null || true
-          xcrun simctl list devices || true
-
       - name: Create canonical source directory
         run: |
           set -x
-          sudo mkdir -p /Users/Shared
+          sudo mkdir -p /Users/Shared/bazel-disk-cache
+          sudo chown -R "$USER" /Users/Shared
           cp -R "$GITHUB_WORKSPACE" /Users/Shared/
           mv "/Users/Shared/$(basename "$GITHUB_WORKSPACE")" /Users/Shared/telegram-ios
+
+      - name: Cache Bazel disk cache
+        uses: actions/cache@v4
+        with:
+          path: /Users/Shared/bazel-disk-cache
+          key: bazel-cache-${{ inputs.os }}-${{ inputs.configuration }}-${{ github.sha }}
+          restore-keys: |
+            bazel-cache-${{ inputs.os }}-${{ inputs.configuration }}-
+            bazel-cache-${{ inputs.os }}-
 
       - name: Build Toast App
         run: |
@@ -164,6 +170,7 @@ jobs:
             --bazelUserRoot="$BAZEL_USER_ROOT" \
             --overrideXcodeVersion \
             --overrideBazelVersion \
+            --cacheDir="/Users/Shared/bazel-disk-cache" \
             build \
             --configurationPath="build-system/toast-configuration.json" \
             --codesigningInformationPath=build-system/fake-codesigning \
