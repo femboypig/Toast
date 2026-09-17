@@ -3,32 +3,46 @@ import Foundation
 public final class ToastVoiceChanger {
     public static let shared = ToastVoiceChanger()
 
-    private let sampleRate: Double = 16000.0
+    private let sampleRate: Double = 48000.0
 
-    // Pitch shifting circular buffer: size 2048 (128ms at 16kHz), window size 1024 (64ms)
-    private let pitchBufferSize: Int = 2048
-    private let pitchWindowSize: Int = 1024
-    private var pitchBuffer: [Float] = Array(repeating: 0.0, count: 2048)
+    // Pitch shifting circular buffer: size 8192 (170ms at 48kHz), window size 4096 (85ms)
+    private let pitchBufferSize: Int = 8192
+    private let pitchWindowSize: Int = 4096
+    private var pitchBuffer: [Float] = Array(repeating: 0.0, count: 8192)
     private var pitchWriteIndex: Int = 0
     private var pitchPhase: Double = 0.0
 
-    // Echo circular buffer: size 8192 (512ms at 16kHz)
-    private let echoBufferSize: Int = 8192
-    private var echoBuffer: [Float] = Array(repeating: 0.0, count: 8192)
+    // Echo circular buffer: size 32768 (682ms at 48kHz)
+    private let echoBufferSize: Int = 32768
+    private var echoBuffer: [Float] = Array(repeating: 0.0, count: 32768)
     private var echoWriteIndex: Int = 0
 
-    // Reverb comb filters
-    private var revBuffer1: [Float] = Array(repeating: 0.0, count: 563)
+    // Reverb comb filters (primes around 32-48ms at 48kHz)
+    private let revLen1: Int = 1553
+    private var revBuffer1: [Float] = Array(repeating: 0.0, count: 1553)
     private var revIndex1: Int = 0
-    private var revBuffer2: [Float] = Array(repeating: 0.0, count: 719)
+
+    private let revLen2: Int = 1787
+    private var revBuffer2: [Float] = Array(repeating: 0.0, count: 1787)
     private var revIndex2: Int = 0
-    private var revBuffer3: [Float] = Array(repeating: 0.0, count: 887)
+
+    private let revLen3: Int = 2053
+    private var revBuffer3: [Float] = Array(repeating: 0.0, count: 2053)
     private var revIndex3: Int = 0
+
+    private let revLen4: Int = 2281
+    private var revBuffer4: [Float] = Array(repeating: 0.0, count: 2281)
+    private var revIndex4: Int = 0
+
+    // Schroeder all-pass diffuser (11.6ms at 48kHz) to eliminate comb flutter
+    private let allpassLen: Int = 557
+    private var allpassBuffer: [Float] = Array(repeating: 0.0, count: 557)
+    private var allpassIndex: Int = 0
 
     // Robot modulation phase
     private var robotPhase: Double = 0.0
 
-    // Bass filter state
+    // Bass filter state (one-pole low-pass filter)
     private var bassState: Float = 0.0
 
     private init() {}
@@ -40,11 +54,15 @@ public final class ToastVoiceChanger {
         self.echoWriteIndex = 0
         self.echoBuffer = Array(repeating: 0.0, count: self.echoBufferSize)
         self.revIndex1 = 0
-        self.revBuffer1 = Array(repeating: 0.0, count: 563)
+        self.revBuffer1 = Array(repeating: 0.0, count: self.revLen1)
         self.revIndex2 = 0
-        self.revBuffer2 = Array(repeating: 0.0, count: 719)
+        self.revBuffer2 = Array(repeating: 0.0, count: self.revLen2)
         self.revIndex3 = 0
-        self.revBuffer3 = Array(repeating: 0.0, count: 887)
+        self.revBuffer3 = Array(repeating: 0.0, count: self.revLen3)
+        self.revIndex4 = 0
+        self.revBuffer4 = Array(repeating: 0.0, count: self.revLen4)
+        self.allpassIndex = 0
+        self.allpassBuffer = Array(repeating: 0.0, count: self.allpassLen)
         self.robotPhase = 0.0
         self.bassState = 0.0
     }
@@ -79,20 +97,20 @@ public final class ToastVoiceChanger {
         let pitchMask = self.pitchBufferSize - 1
         let echoMask = self.echoBufferSize - 1
 
-        let echoDelaySamples = 2560 // 160ms delay
-        let echoFeedback = min(0.65, echoStrength * 0.55)
-        let echoMix = min(0.8, echoStrength * 0.7)
+        let echoDelaySamples = 9600 // 200ms delay at 48kHz
+        let echoFeedback = min(0.60, echoStrength * 0.50)
+        let echoMix = min(0.75, echoStrength * 0.65)
 
         let robotFreqStep = (2.0 * Double.pi * 130.0) / self.sampleRate // 130Hz metallic carrier
 
         let bassGain = Float(pow(10.0, bassBoost / 20.0) - 1.0)
-        let bassAlpha: Float = 0.08 // ~200Hz cutoff at 16kHz
+        let bassAlpha: Float = 0.02 // ~150Hz cutoff at 48kHz
 
         for i in 0 ..< count {
             let inputSample = Float(samples[i])
             var processedSample = inputSample
 
-            // 1. Clean continuous pitch shifter
+            // 1. Clean continuous pitch shifter with Hann window crossfade
             if isPitchActive {
                 self.pitchBuffer[self.pitchWriteIndex] = inputSample
 
@@ -127,7 +145,7 @@ public final class ToastVoiceChanger {
             if isRobotActive {
                 let mod = Float(cos(self.robotPhase))
                 let robotMix = Float(robotStrength)
-                processedSample = processedSample * (1.0 - robotMix * 0.8) + (processedSample * mod) * robotMix
+                processedSample = processedSample * (1.0 - robotMix * 0.75) + (processedSample * mod) * robotMix
                 self.robotPhase = (self.robotPhase + robotFreqStep).truncatingRemainder(dividingBy: 2.0 * Double.pi)
             }
 
@@ -137,25 +155,38 @@ public final class ToastVoiceChanger {
                 processedSample += self.bassState * bassGain
             }
 
-            // 4. Multi-tap Reverb
+            // 4. Multi-tap Reverb with Schroeder allpass diffusion
             if isReverbActive {
-                let revMix = Float(reverbStrength * 0.45)
-                let revFeed: Float = 0.55
+                let revMix = Float(reverbStrength * 0.40)
+                let revFeed: Float = 0.50
 
                 let out1 = self.revBuffer1[self.revIndex1]
                 let out2 = self.revBuffer2[self.revIndex2]
                 let out3 = self.revBuffer3[self.revIndex3]
+                let out4 = self.revBuffer4[self.revIndex4]
 
                 self.revBuffer1[self.revIndex1] = processedSample + out1 * revFeed
                 self.revBuffer2[self.revIndex2] = processedSample + out2 * revFeed
                 self.revBuffer3[self.revIndex3] = processedSample + out3 * revFeed
+                self.revBuffer4[self.revIndex4] = processedSample + out4 * revFeed
 
-                self.revIndex1 = (self.revIndex1 + 1) % 563
-                self.revIndex2 = (self.revIndex2 + 1) % 719
-                self.revIndex3 = (self.revIndex3 + 1) % 887
+                self.revIndex1 = (self.revIndex1 + 1) % self.revLen1
+                self.revIndex2 = (self.revIndex2 + 1) % self.revLen2
+                self.revIndex3 = (self.revIndex3 + 1) % self.revLen3
+                self.revIndex4 = (self.revIndex4 + 1) % self.revLen4
 
-                let revSum = (out1 + out2 + out3) * 0.33
-                processedSample = processedSample * (1.0 - revMix * 0.4) + revSum * revMix
+                let combSum = (out1 + out2 + out3 + out4) * 0.25
+
+                // Allpass diffuser: y[n] = -g*x[n] + x[n-D] + g*y[n-D]
+                let apIn = combSum
+                let apOutOld = self.allpassBuffer[self.allpassIndex]
+                let apFeedback: Float = 0.5
+                let apNew = apIn + apOutOld * apFeedback
+                self.allpassBuffer[self.allpassIndex] = apNew
+                self.allpassIndex = (self.allpassIndex + 1) % self.allpassLen
+                let diffuseReverb = apOutOld - apIn * apFeedback
+
+                processedSample = processedSample * (1.0 - revMix * 0.35) + diffuseReverb * revMix
             }
 
             // 5. Echo / Delay line
@@ -172,7 +203,7 @@ public final class ToastVoiceChanger {
 
             // 6. Distortion / Soft Drive
             if isDistortionActive {
-                let drive = Float(distortionStrength * 4.0)
+                let drive = Float(distortionStrength * 3.5)
                 let norm = processedSample / 32768.0
                 let driven = (1.0 + drive) * norm / (1.0 + drive * abs(norm))
                 processedSample = driven * 32768.0
