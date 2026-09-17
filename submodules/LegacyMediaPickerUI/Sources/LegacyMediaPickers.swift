@@ -404,16 +404,18 @@ public func legacyAssetPickerEnqueueMessages(
                                 case let .image(image):
                                     var randomId: Int64 = 0
                                     arc4random_buf(&randomId, 8)
-                                    let tempFilePath = NSTemporaryDirectory() + "\(randomId).jpeg"
-                                    let maxSize = item.forceHd ? CGSize(width: 2560.0, height: 2560.0) : CGSize(width: 1280.0, height: 1280.0)
-                                    let scaledSize = image.size.aspectFittedOrSmaller(maxSize)
+                                    let sendOriginal = UserDefaults.standard.object(forKey: "Toast_sendOriginalMedia") as? Bool ?? false
+                                    let forceHd = item.forceHd || sendOriginal
+                                    let maxSize = sendOriginal ? CGSize(width: 4096.0, height: 4096.0) : (forceHd ? CGSize(width: 2560.0, height: 2560.0) : CGSize(width: 1280.0, height: 1280.0))
+                                    let scaledSize = sendOriginal ? image.size : image.size.aspectFittedOrSmaller(maxSize)
                                 
                                     if let scaledImage = TGScaleImageToPixelSize(image, scaledSize) {
                                         let tempFile = EngineTempBox.shared.tempFile(fileName: "file")
                                         defer {
                                             EngineTempBox.shared.dispose(tempFile)
                                         }
-                                        if let scaledImageData = compressImageToJPEG(scaledImage, quality: 0.6, tempFilePath: tempFile.path) {
+                                        let jpegQuality: CGFloat = sendOriginal ? 0.95 : (forceHd ? 0.85 : 0.6)
+                                        if let scaledImageData = compressImageToJPEG(scaledImage, quality: jpegQuality, tempFilePath: tempFile.path) {
                                             let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFilePath))
 
                                             let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)
@@ -439,7 +441,7 @@ public func legacyAssetPickerEnqueueMessages(
                                                 var finalDimensions: CGSize = dimensions
                                                 var finalDuration: Double = duration
  
-                                                let preset: TGMediaVideoConversionPreset = TGMediaVideoConversionPresetCompressedMedium
+                                                let preset: TGMediaVideoConversionPreset = sendOriginal ? TGMediaVideoConversionPresetCompressedVeryHigh : TGMediaVideoConversionPresetCompressedMedium
                                                 finalDimensions = TGMediaVideoConverter.dimensions(for: finalDimensions, adjustments: adjustments, preset: preset)
                                                 
                                                 var resourceAdjustments: VideoMediaResourceAdjustments?
@@ -619,8 +621,11 @@ public func legacyAssetPickerEnqueueMessages(
                                         var randomId: Int64 = 0
                                         arc4random_buf(&randomId, 8)
                                         let size = CGSize(width: CGFloat(asset.pixelWidth), height: CGFloat(asset.pixelHeight))
-                                        let scaledSize = size.aspectFittedOrSmaller(CGSize(width: 1280.0, height: 1280.0))
-                                        let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: Int64.random(in: Int64.min ... Int64.max), forceHd: item.forceHd)
+                                        let sendOriginal = UserDefaults.standard.object(forKey: "Toast_sendOriginalMedia") as? Bool ?? false
+                                        let forceHd = item.forceHd || sendOriginal
+                                        let maxDimension: CGFloat = sendOriginal ? max(CGFloat(asset.pixelWidth), CGFloat(asset.pixelHeight)) : (forceHd ? 2560.0 : 1280.0)
+                                        let scaledSize = size.aspectFittedOrSmaller(CGSize(width: maxDimension, height: maxDimension))
+                                        let resource = PhotoLibraryMediaResource(localIdentifier: asset.localIdentifier, uniqueId: Int64.random(in: Int64.min ... Int64.max), forceHd: forceHd)
                                     
                                         let media: EngineRawMedia
                                         representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
@@ -871,7 +876,8 @@ public func legacyAssetPickerEnqueueMessages(
                             }
                         
                             let defaultPreset = TGMediaVideoConversionPreset(rawValue: UInt32(UserDefaults.standard.integer(forKey: "TG_preferredVideoPreset_v0")))
-                            var preset: TGMediaVideoConversionPreset = TGMediaVideoConversionPresetCompressedMedium
+                            let sendOriginal = UserDefaults.standard.object(forKey: "Toast_sendOriginalMedia") as? Bool ?? false
+                            var preset: TGMediaVideoConversionPreset = sendOriginal ? TGMediaVideoConversionPresetCompressedVeryHigh : TGMediaVideoConversionPresetCompressedMedium
                             if let selectedPreset = adjustments?.preset {
                                 preset = selectedPreset
                             } else if preset == TGMediaVideoConversionPresetCompressedDefault && defaultPreset != TGMediaVideoConversionPresetCompressedDefault {
@@ -881,7 +887,7 @@ public func legacyAssetPickerEnqueueMessages(
                                 preset = TGMediaVideoConversionPresetAnimation
                             }
                             if !asAnimation {
-                                finalDimensions = TGMediaVideoConverter.dimensions(for: finalDimensions, adjustments: adjustments, preset: TGMediaVideoConversionPresetCompressedMedium)
+                                finalDimensions = TGMediaVideoConverter.dimensions(for: finalDimensions, adjustments: adjustments, preset: preset)
                             }
                             
                             var resourceAdjustments: VideoMediaResourceAdjustments?
