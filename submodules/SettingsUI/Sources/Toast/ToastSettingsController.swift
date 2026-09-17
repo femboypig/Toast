@@ -18,6 +18,7 @@ private final class ToastSettingsControllerArguments {
     let toggleBlockChannelAds: (Bool) -> Void
     let toggleSendOriginalMedia: (Bool) -> Void
     let toggleFreeVoiceToText: (Bool) -> Void
+    let toggleForwardWithoutQuote: (Bool) -> Void
     let toggleVoiceChangerEnabled: (Bool) -> Void
     let updateVoiceChangerPitch: (Float) -> Void
     let updateVoiceChangerEcho: (Float) -> Void
@@ -41,6 +42,7 @@ private final class ToastSettingsControllerArguments {
         toggleBlockChannelAds: @escaping (Bool) -> Void,
         toggleSendOriginalMedia: @escaping (Bool) -> Void,
         toggleFreeVoiceToText: @escaping (Bool) -> Void,
+        toggleForwardWithoutQuote: @escaping (Bool) -> Void,
         toggleVoiceChangerEnabled: @escaping (Bool) -> Void,
         updateVoiceChangerPitch: @escaping (Float) -> Void,
         updateVoiceChangerEcho: @escaping (Float) -> Void,
@@ -63,6 +65,7 @@ private final class ToastSettingsControllerArguments {
         self.toggleBlockChannelAds = toggleBlockChannelAds
         self.toggleSendOriginalMedia = toggleSendOriginalMedia
         self.toggleFreeVoiceToText = toggleFreeVoiceToText
+        self.toggleForwardWithoutQuote = toggleForwardWithoutQuote
         self.toggleVoiceChangerEnabled = toggleVoiceChangerEnabled
         self.updateVoiceChangerPitch = updateVoiceChangerPitch
         self.updateVoiceChangerEcho = updateVoiceChangerEcho
@@ -104,6 +107,8 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
     case sendOriginalMediaInfo(String)
     case freeVoiceToText(String, Bool)
     case freeVoiceToTextInfo(String)
+    case forwardWithoutQuote(String, Bool)
+    case forwardWithoutQuoteInfo(String)
 
     case voiceChangerHeader(String)
     case voiceChangerEnabled(String, Bool)
@@ -134,7 +139,7 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
 
     var section: ItemListSectionId {
         switch self {
-        case .mediaPrivacyHeader, .saveDisappearingMedia, .saveDisappearingMediaInfo, .allowScreenshots, .allowScreenshotsInfo, .allowSavingProtectedContent, .allowSavingProtectedContentInfo, .showAvatarsInDirect, .showAvatarsInDirectInfo, .blockChannelAds, .blockChannelAdsInfo, .sendOriginalMedia, .sendOriginalMediaInfo, .freeVoiceToText, .freeVoiceToTextInfo:
+        case .mediaPrivacyHeader, .saveDisappearingMedia, .saveDisappearingMediaInfo, .allowScreenshots, .allowScreenshotsInfo, .allowSavingProtectedContent, .allowSavingProtectedContentInfo, .showAvatarsInDirect, .showAvatarsInDirectInfo, .blockChannelAds, .blockChannelAdsInfo, .sendOriginalMedia, .sendOriginalMediaInfo, .freeVoiceToText, .freeVoiceToTextInfo, .forwardWithoutQuote, .forwardWithoutQuoteInfo:
             return ToastSettingsSection.mediaPrivacy.rawValue
         case .voiceChangerHeader, .voiceChangerEnabled, .voiceChangerPitch, .voiceChangerEcho, .voiceChangerReverb, .voiceChangerRobot, .voiceChangerBass, .voiceChangerDistortion, .voiceChangerReset, .voiceChangerInfo:
             return ToastSettingsSection.voiceChanger.rawValue
@@ -181,6 +186,10 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
             return 13
         case .freeVoiceToTextInfo:
             return 14
+        case .forwardWithoutQuote:
+            return 15
+        case .forwardWithoutQuoteInfo:
+            return 16
         case .voiceChangerHeader:
             return 20
         case .voiceChangerEnabled:
@@ -278,6 +287,12 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
                 args.toggleFreeVoiceToText(value)
             })
         case let .freeVoiceToTextInfo(text):
+            return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
+        case let .forwardWithoutQuote(title, value):
+            return ItemListSwitchItem(presentationData: presentationData, title: title, value: value, sectionId: self.section, style: .blocks, updated: { value in
+                args.toggleForwardWithoutQuote(value)
+            })
+        case let .forwardWithoutQuoteInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
 
         case let .voiceChangerHeader(text):
@@ -430,6 +445,8 @@ private func toastSettingsEntries(settings: ToastSettings) -> [ToastSettingsEntr
     entries.append(.sendOriginalMediaInfo("Automatically sends photos and videos in original uncompressed resolution by default."))
     entries.append(.freeVoiceToText("Free Voice-to-Text", settings.freeVoiceToText))
     entries.append(.freeVoiceToTextInfo("Transcribes voice and video messages locally using Apple Speech Framework (Neural Engine) without Telegram Premium."))
+    entries.append(.forwardWithoutQuote("Forward Without Quote", settings.forwardWithoutQuote))
+    entries.append(.forwardWithoutQuoteInfo("Automatically removes sender name and forward attribution when forwarding messages."))
 
     entries.append(.voiceChangerHeader("VOICE CHANGER"))
     entries.append(.voiceChangerEnabled("Enable Voice Changer", settings.voiceChangerEnabled))
@@ -521,6 +538,9 @@ public func toastSettingsController(context: AccountContext) -> ViewController {
         },
         toggleFreeVoiceToText: { value in
             ToastSettings.shared.freeVoiceToText = value
+        },
+        toggleForwardWithoutQuote: { value in
+            ToastSettings.shared.forwardWithoutQuote = value
         },
         toggleVoiceChangerEnabled: { value in
             ToastSettings.shared.voiceChangerEnabled = value
