@@ -27,6 +27,39 @@ public enum ToastVoiceChangerMode: String, CaseIterable {
     }
 }
 
+public enum ToastBypassLevel: String, CaseIterable {
+    case off = "off"
+    case low = "low"
+    case medium = "medium"
+    case max = "max"
+
+    public var title: String {
+        switch self {
+        case .off:
+            return "Disabled"
+        case .low:
+            return "Low (DoH)"
+        case .medium:
+            return "Medium (DoH + TCP Split)"
+        case .max:
+            return "Max (Full Bypass + MTProxy)"
+        }
+    }
+
+    public var detailText: String {
+        switch self {
+        case .off:
+            return "Standard connection without anti-censorship routing"
+        case .low:
+            return "Encrypted DNS-over-HTTPS via Cloudflare & Google direct-IP"
+        case .medium:
+            return "DoH + TCP handshake packet splitting to evade ISP DPI/TSPU"
+        case .max:
+            return "DoH + TCP split + auto-rotating Fake-TLS MTProxy pool with health checks"
+        }
+    }
+}
+
 public final class ToastSettings {
     public static let shared = ToastSettings()
 
@@ -45,6 +78,7 @@ public final class ToastSettings {
     private let voiceChangerModeKey = "Toast_voiceChangerMode"
     private let backgroundKeepAliveKey = "Toast_backgroundKeepAlive"
     private let localNotificationsEnabledKey = "Toast_localNotificationsEnabled"
+    private let bypassLevelKey = "Toast_bypassLevel"
 
     private let updatedPromise = ValuePromise<Bool>(true, ignoreRepeated: false)
     public var updated: Signal<Void, NoError> {
@@ -64,7 +98,8 @@ public final class ToastSettings {
             self.voiceChangerBassKey: Float(0.0),
             self.voiceChangerDistortionKey: Float(0.0),
             self.backgroundKeepAliveKey: true,
-            self.localNotificationsEnabledKey: true
+            self.localNotificationsEnabledKey: true,
+            self.bypassLevelKey: ToastBypassLevel.max.rawValue
         ])
     }
 
@@ -206,6 +241,21 @@ public final class ToastSettings {
         }
     }
 
+    public var bypassLevel: ToastBypassLevel {
+        get {
+            if let rawValue = self.defaults.string(forKey: self.bypassLevelKey),
+               let level = ToastBypassLevel(rawValue: rawValue) {
+                return level
+            }
+            return .max
+        }
+        set {
+            self.defaults.set(newValue.rawValue, forKey: self.bypassLevelKey)
+            ToastAntiCensorship.shared.applyCurrentLevel()
+            self.updatedPromise.set(true)
+        }
+    }
+
     public func resetToDefaults() {
         self.saveDisappearingMedia = true
         self.allowScreenshots = true
@@ -220,6 +270,7 @@ public final class ToastSettings {
         self.voiceChangerMode = .off
         self.backgroundKeepAlive = true
         self.localNotificationsEnabled = true
+        self.bypassLevel = .max
         self.updatedPromise.set(true)
     }
 }
