@@ -865,8 +865,8 @@ final class ChatItemGalleryFooterContentNode: GalleryFooterContentNode, ASScroll
         }
         var canFullscreen = false
         var canDelete: Bool
-        let allowSavingSecret = UserDefaults.standard.bool(forKey: "Toast_saveDisappearingMedia")
-        let allowSavingProtected = UserDefaults.standard.bool(forKey: "Toast_allowSavingProtectedContent")
+        let allowSavingSecret = UserDefaults.standard.object(forKey: "Toast_saveDisappearingMedia") as? Bool ?? true
+        let allowSavingProtected = UserDefaults.standard.object(forKey: "Toast_allowSavingProtectedContent") as? Bool ?? true
         var canShare = (!message.containsSecretMedia || allowSavingSecret) && !Namespaces.Message.allNonRegular.contains(message.id.namespace) && message.adAttribute == nil
                 
         var canEdit = false
