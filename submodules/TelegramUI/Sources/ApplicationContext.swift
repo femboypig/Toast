@@ -33,6 +33,7 @@ import PhoneNumberFormat
 import AttachmentUI
 import MinimizedContainer
 import BrowserUI
+import TelegramStringFormatting
 
 final class UnauthorizedApplicationContext {
     let sharedContext: SharedAccountContextImpl
@@ -65,7 +66,7 @@ final class UnauthorizedApplicationContext {
         self.isReady.set(self.rootController.ready.get())
         
         account.shouldBeServiceTaskMaster.set(sharedContext.applicationBindings.applicationInForeground |> map { value -> AccountServiceTaskMasterMode in
-            if value {
+            if value || ToastSettings.shared.backgroundKeepAlive {
                 return .always
             } else {
                 return .never
@@ -510,31 +511,40 @@ final class AuthorizedApplicationContext {
                         })
                     }
                 } else {
-                    if notify, let peer = firstMessage.peers[firstMessage.id.peerId] {
+                    for (messages, _, notify, _) in messageList {
+                        guard notify, let firstMessage = messages.first, let peer = firstMessage.peers[firstMessage.id.peerId] else {
+                            continue
+                        }
                         let presentationData = strongSelf.context.sharedContext.currentPresentationData.with { $0 }
-                        let authorTitle = EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
-                        let bodyText: String
-                        if !firstMessage.text.isEmpty {
-                            bodyText = firstMessage.text
-                        } else if !firstMessage.media.isEmpty {
-                            if firstMessage.media.first is TelegramMediaImage {
-                                bodyText = "Photo"
-                            } else if let file = firstMessage.media.first as? TelegramMediaFile {
-                                if file.isVoice {
-                                    bodyText = "Voice Message"
-                                } else if file.isVideo {
-                                    bodyText = "Video"
+                        var title: String?
+                        if let chatPeer = messageMainPeer(EngineMessage(firstMessage)) {
+                            if case let .channel(channel) = chatPeer, case .broadcast = channel.info {
+                                title = chatPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                            } else if let author = firstMessage.author {
+                                let authorString = EnginePeer(author).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                                if author.id != chatPeer.id {
+                                    title = "\(authorString)@\(chatPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder))"
                                 } else {
-                                    bodyText = file.fileName ?? "File"
+                                    title = chatPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                                 }
                             } else {
-                                bodyText = "New message"
+                                title = chatPeer.displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
                             }
-                        } else {
-                            bodyText = "New message"
                         }
+                        let resolvedTitle = title ?? EnginePeer(peer).displayTitle(strings: presentationData.strings, displayOrder: presentationData.nameDisplayOrder)
+                        
+                        let (textString, _, _) = descriptionStringForMessage(
+                            contentSettings: strongSelf.context.currentContentSettings.with { $0 },
+                            message: EngineMessage(firstMessage),
+                            strings: presentationData.strings,
+                            nameDisplayOrder: presentationData.nameDisplayOrder,
+                            dateTimeFormat: presentationData.dateTimeFormat,
+                            accountPeerId: strongSelf.context.account.peerId
+                        )
+                        let bodyText = textString.string.isEmpty ? "New message" : textString.string
+                        
                         ToastBackgroundKeepAlive.shared.postLocalNotification(
-                            title: authorTitle,
+                            title: resolvedTitle,
                             body: bodyText,
                             peerId: firstMessage.id.peerId.toInt64(),
                             messageId: firstMessage.id.id
