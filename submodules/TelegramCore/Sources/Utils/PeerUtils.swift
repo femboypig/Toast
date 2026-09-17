@@ -252,7 +252,7 @@ public extension Peer {
     }
     
     var isCopyProtectionEnabled: Bool {
-        if UserDefaults.standard.bool(forKey: "Toast_allowSavingProtectedContent") {
+        if UserDefaults.standard.object(forKey: "Toast_allowSavingProtectedContent") as? Bool ?? true {
             return false
         }
         switch self {
