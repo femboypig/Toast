@@ -205,6 +205,16 @@ public final class ToastBackgroundKeepAlive {
 
         var finalContent: UNNotificationContent = content
 
+        if let data = resolvedAvatarData {
+            let tempDir = URL(fileURLWithPath: NSTemporaryDirectory(), isDirectory: true)
+            let avatarFile = tempDir.appendingPathComponent("toast_avatar_\(peerId).jpg")
+            try? data.write(to: avatarFile)
+            if let attachment = try? UNNotificationAttachment(identifier: "avatar_\(peerId)", url: avatarFile, options: nil) {
+                content.attachments = [attachment]
+                finalContent = content
+            }
+        }
+
         if #available(iOS 15.0, *) {
             let senderName = senderTitle ?? title
             var personImage: INImage?
