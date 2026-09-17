@@ -6364,7 +6364,7 @@ public final class StoryItemSetContainerComponent: Component {
                 c?.popItems()
             })))
 
-            items.append(.custom(SliderContextItem(minValue: 0.2, maxValue: 2.5, value: baseRate, valueChanged: { [weak self] newValue, done in
+            items.append(.custom(SliderContextItem(minValue: 0.2, maxValue: 3.0, value: baseRate, valueChanged: { [weak self] newValue, done in
                 guard let self, let component = self.component else {
                     return
                 }
@@ -7918,7 +7918,8 @@ private func speedList(strings: PresentationStrings) -> [(String, String, Double
         ("0.5x", "0.5x", 0.5),
         (strings.PlaybackSpeed_Normal, "1x", 1.0),
         ("1.5x", "1.5x", 1.5),
-        ("2x", "2x", 2.0)
+        ("2x", "2x", 2.0),
+        ("3x", "3x", 3.0)
     ]
 }
 
