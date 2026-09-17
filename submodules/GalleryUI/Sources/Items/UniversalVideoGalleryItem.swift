@@ -3393,7 +3393,8 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             ("0.5x", "0.5x", 0.5),
             (strings.PlaybackSpeed_Normal, "1x", 1.0),
             ("1.5x", "1.5x", 1.5),
-            ("2x", "2x", 2.0)
+            ("2x", "2x", 2.0),
+            ("3x", "3x", 3.0)
         ]
 
         return speedList
@@ -3556,7 +3557,7 @@ final class UniversalVideoGalleryItemNode: ZoomableContentGalleryItemNode {
             
             if isSettings {
                 let sliderValuePromise = ValuePromise<Double?>(nil)
-                topItems.append(.custom(SliderContextItem(title: strongSelf.presentationData.strings.Gallery_VideoSettings_SpeedControlTitle, minValue: 0.2, maxValue: 2.5, value: status.baseRate, valueChanged: { [weak self] newValue, _ in
+                topItems.append(.custom(SliderContextItem(title: strongSelf.presentationData.strings.Gallery_VideoSettings_SpeedControlTitle, minValue: 0.2, maxValue: 3.0, value: status.baseRate, valueChanged: { [weak self] newValue, _ in
                     guard let strongSelf = self, let videoNode = strongSelf.videoNode else {
                         return
                     }
