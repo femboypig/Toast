@@ -9,6 +9,7 @@ public final class ToastBackgroundKeepAlive {
     private var backgroundTaskIdentifier: UIBackgroundTaskIdentifier = .invalid
     private var silentAudioPlayer: AVAudioPlayer?
     private var isRunning = false
+    private var isObserverRegistered = false
 
     private init() {}
 
@@ -28,6 +29,7 @@ public final class ToastBackgroundKeepAlive {
             self?.renewBackgroundTask()
         }
 
+        self.setupInterruptionObserver()
         self.startSilentAudio()
     }
 
@@ -54,11 +56,37 @@ public final class ToastBackgroundKeepAlive {
         }
     }
 
-    private func startSilentAudio() {
-        guard self.silentAudioPlayer == nil else { return }
+    private func setupInterruptionObserver() {
+        guard !self.isObserverRegistered else { return }
+        self.isObserverRegistered = true
+        NotificationCenter.default.addObserver(self, selector: #selector(self.handleAudioInterruption(_:)), name: AVAudioSession.interruptionNotification, object: nil)
+    }
 
-        // Generate a minimal 1-second silent WAV file in memory
-        let sampleRate: Int = 8000
+    @objc private func handleAudioInterruption(_ notification: Notification) {
+        guard let userInfo = notification.userInfo,
+              let typeValue = userInfo[AVAudioSessionInterruptionTypeKey] as? UInt,
+              let type = AVAudioSession.InterruptionType(rawValue: typeValue) else {
+            return
+        }
+
+        if type == .ended {
+            let _ = try? AVAudioSession.sharedInstance().setActive(true)
+            if self.isRunning && ToastSettings.shared.backgroundKeepAlive {
+                self.silentAudioPlayer?.play()
+            }
+        }
+    }
+
+    private func startSilentAudio() {
+        guard self.silentAudioPlayer == nil else {
+            if self.silentAudioPlayer?.isPlaying == false {
+                self.silentAudioPlayer?.play()
+            }
+            return
+        }
+
+        // Generate a minimal 1-second WAV file in memory with sub-audible dither
+        let sampleRate: Int = 16000
         let numSamples: Int = sampleRate
         let numChannels: Int = 1
         let bitsPerSample: Int = 16
@@ -81,14 +109,21 @@ public final class ToastBackgroundKeepAlive {
         data.append(contentsOf: withUnsafeBytes(of: UInt16(bitsPerSample).littleEndian, Array.init))
         data.append(contentsOf: [0x64, 0x61, 0x74, 0x61]) // "data"
         data.append(contentsOf: withUnsafeBytes(of: UInt32(dataSize).littleEndian, Array.init))
-        data.append(Data(repeating: 0, count: dataSize))
+
+        // Sub-audible dither (+1/-1, -90dB) prevents iOS power management from idling audio hardware
+        var pcmSamples = [Int16](repeating: 0, count: numSamples)
+        for i in 0 ..< numSamples {
+            pcmSamples[i] = (i % 2 == 0) ? 1 : -1
+        }
+        data.append(contentsOf: pcmSamples.withUnsafeBytes { Array($0) })
 
         do {
-            try AVAudioSession.sharedInstance().setCategory(.playback, options: [.mixWithOthers])
+            try AVAudioSession.sharedInstance().setCategory(.playback, mode: .default, options: [.mixWithOthers])
             try AVAudioSession.sharedInstance().setActive(true)
             let player = try AVAudioPlayer(data: data)
             player.numberOfLoops = -1
             player.volume = 0.001
+            player.prepareToPlay()
             player.play()
             self.silentAudioPlayer = player
         } catch {
@@ -104,20 +139,6 @@ public final class ToastBackgroundKeepAlive {
         guard ToastSettings.shared.localNotificationsEnabled else { return }
 
         let center = UNUserNotificationCenter.current()
-        center.getNotificationSettings { settings in
-            if settings.authorizationStatus == .notDetermined {
-                center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
-                    if granted {
-                        self.enqueueNotification(title: title, body: body, peerId: peerId, messageId: messageId)
-                    }
-                }
-            } else if settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional {
-                self.enqueueNotification(title: title, body: body, peerId: peerId, messageId: messageId)
-            }
-        }
-    }
-
-    private func enqueueNotification(title: String, body: String, peerId: Int64, messageId: Int32) {
         let content = UNMutableNotificationContent()
         content.title = title
         content.body = body.isEmpty ? "New message" : body
@@ -133,6 +154,16 @@ public final class ToastBackgroundKeepAlive {
             trigger: nil
         )
 
-        UNUserNotificationCenter.current().add(request, withCompletionHandler: nil)
+        center.getNotificationSettings { settings in
+            if settings.authorizationStatus == .notDetermined {
+                center.requestAuthorization(options: [.alert, .sound, .badge]) { granted, _ in
+                    if granted {
+                        center.add(request, withCompletionHandler: nil)
+                    }
+                }
+            } else if settings.authorizationStatus == .authorized || settings.authorizationStatus == .provisional {
+                center.add(request, withCompletionHandler: nil)
+            }
+        }
     }
 }
