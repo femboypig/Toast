@@ -772,7 +772,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
                 break
             }
         }
-        if let displayAdPeer {
+        let blockAds = UserDefaults.standard.object(forKey: "Toast_blockChannelAds") as? Bool ?? true
+        if let displayAdPeer, !blockAds {
             self.adMessagesContext = context.engine.messages.adMessages(peerId: displayAdPeer, activateManually: true)
         } else {
             self.adMessagesContext = nil
@@ -1550,7 +1551,8 @@ class ChatControllerNode: ASDisplayNode, ASScrollViewDelegate {
         }
         
         var displayAdPanel = false
-        if !hideTopPanels, let _ = self.chatPresentationInterfaceState.adMessage {
+        let blockAds = UserDefaults.standard.object(forKey: "Toast_blockChannelAds") as? Bool ?? true
+        if !blockAds, !hideTopPanels, let _ = self.chatPresentationInterfaceState.adMessage {
             if let chatHistoryState = self.chatPresentationInterfaceState.chatHistoryState, case .loaded(false, _) = chatHistoryState {
                 if let user = chatPresentationInterfaceState.renderedPeer?.peer as? TelegramUser, user.botInfo != nil && !self.chatPresentationInterfaceState.peerIsBlocked && self.chatPresentationInterfaceState.hasAtLeast3Messages {
                     displayAdPanel = true
