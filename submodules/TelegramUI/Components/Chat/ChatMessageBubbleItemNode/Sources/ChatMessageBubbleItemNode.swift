@@ -1809,7 +1809,8 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
         
             if !peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
-                if peerId.isGroupOrChannel && effectiveAuthor != nil {
+                let showAvatarsInDirect = UserDefaults.standard.object(forKey: "Toast_showAvatarsInDirectChats") as? Bool ?? true
+                if (peerId.isGroupOrChannel || showAvatarsInDirect) && effectiveAuthor != nil {
                     var isBroadcastChannel = false
                     var isMonoForum = false
                     if let peer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel {
