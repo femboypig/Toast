@@ -343,6 +343,7 @@ public final class AppLockContextImpl: AppLockContext {
     }
     
     public func lock() {
+        UserDefaults.standard.set(false, forKey: "Toast_isDecoyActive")
         self.updateLockState { state in
             var state = state
             state.isManuallyLocked = true
