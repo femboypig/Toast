@@ -17,6 +17,11 @@ private final class ToastSettingsControllerArguments {
     let toggleVoiceChangerEnabled: (Bool) -> Void
     let updateVoiceChangerPitch: (Float) -> Void
     let updateVoiceChangerEcho: (Float) -> Void
+    let updateVoiceChangerReverb: (Float) -> Void
+    let updateVoiceChangerRobot: (Float) -> Void
+    let updateVoiceChangerBass: (Float) -> Void
+    let updateVoiceChangerDistortion: (Float) -> Void
+    let resetVoiceEffects: () -> Void
     let toggleBackgroundKeepAlive: (Bool) -> Void
     let toggleLocalNotifications: (Bool) -> Void
     let openAppearance: () -> Void
@@ -30,6 +35,11 @@ private final class ToastSettingsControllerArguments {
         toggleVoiceChangerEnabled: @escaping (Bool) -> Void,
         updateVoiceChangerPitch: @escaping (Float) -> Void,
         updateVoiceChangerEcho: @escaping (Float) -> Void,
+        updateVoiceChangerReverb: @escaping (Float) -> Void,
+        updateVoiceChangerRobot: @escaping (Float) -> Void,
+        updateVoiceChangerBass: @escaping (Float) -> Void,
+        updateVoiceChangerDistortion: @escaping (Float) -> Void,
+        resetVoiceEffects: @escaping () -> Void,
         toggleBackgroundKeepAlive: @escaping (Bool) -> Void,
         toggleLocalNotifications: @escaping (Bool) -> Void,
         openAppearance: @escaping () -> Void,
@@ -42,6 +52,11 @@ private final class ToastSettingsControllerArguments {
         self.toggleVoiceChangerEnabled = toggleVoiceChangerEnabled
         self.updateVoiceChangerPitch = updateVoiceChangerPitch
         self.updateVoiceChangerEcho = updateVoiceChangerEcho
+        self.updateVoiceChangerReverb = updateVoiceChangerReverb
+        self.updateVoiceChangerRobot = updateVoiceChangerRobot
+        self.updateVoiceChangerBass = updateVoiceChangerBass
+        self.updateVoiceChangerDistortion = updateVoiceChangerDistortion
+        self.resetVoiceEffects = resetVoiceEffects
         self.toggleBackgroundKeepAlive = toggleBackgroundKeepAlive
         self.toggleLocalNotifications = toggleLocalNotifications
         self.openAppearance = openAppearance
@@ -70,6 +85,11 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
     case voiceChangerEnabled(String, Bool)
     case voiceChangerPitch(String, String, Float)
     case voiceChangerEcho(String, String, Float)
+    case voiceChangerReverb(String, String, Float)
+    case voiceChangerRobot(String, String, Float)
+    case voiceChangerBass(String, String, Float)
+    case voiceChangerDistortion(String, String, Float)
+    case voiceChangerReset(String)
     case voiceChangerInfo(String)
 
     case backgroundHeader(String)
@@ -88,7 +108,7 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
         switch self {
         case .mediaPrivacyHeader, .saveDisappearingMedia, .saveDisappearingMediaInfo, .allowScreenshots, .allowScreenshotsInfo, .allowSavingProtectedContent, .allowSavingProtectedContentInfo:
             return ToastSettingsSection.mediaPrivacy.rawValue
-        case .voiceChangerHeader, .voiceChangerEnabled, .voiceChangerPitch, .voiceChangerEcho, .voiceChangerInfo:
+        case .voiceChangerHeader, .voiceChangerEnabled, .voiceChangerPitch, .voiceChangerEcho, .voiceChangerReverb, .voiceChangerRobot, .voiceChangerBass, .voiceChangerDistortion, .voiceChangerReset, .voiceChangerInfo:
             return ToastSettingsSection.voiceChanger.rawValue
         case .backgroundHeader, .backgroundKeepAlive, .backgroundKeepAliveInfo, .localNotifications, .localNotificationsInfo:
             return ToastSettingsSection.background.rawValue
@@ -123,8 +143,18 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
             return 12
         case .voiceChangerEcho:
             return 13
-        case .voiceChangerInfo:
+        case .voiceChangerReverb:
             return 14
+        case .voiceChangerRobot:
+            return 15
+        case .voiceChangerBass:
+            return 16
+        case .voiceChangerDistortion:
+            return 17
+        case .voiceChangerReset:
+            return 18
+        case .voiceChangerInfo:
+            return 19
         case .backgroundHeader:
             return 20
         case .backgroundKeepAlive:
@@ -206,6 +236,62 @@ private enum ToastSettingsEntry: ItemListNodeEntry {
                     args.updateVoiceChangerEcho(round(value * 20.0) / 20.0)
                 }
             )
+        case let .voiceChangerReverb(title, valueText, value):
+            return ToastSliderItem(
+                presentationData: presentationData,
+                title: title,
+                valueText: valueText,
+                minValue: 0.0,
+                maxValue: 1.0,
+                value: value,
+                sectionId: self.section,
+                updated: { value in
+                    args.updateVoiceChangerReverb(round(value * 20.0) / 20.0)
+                }
+            )
+        case let .voiceChangerRobot(title, valueText, value):
+            return ToastSliderItem(
+                presentationData: presentationData,
+                title: title,
+                valueText: valueText,
+                minValue: 0.0,
+                maxValue: 1.0,
+                value: value,
+                sectionId: self.section,
+                updated: { value in
+                    args.updateVoiceChangerRobot(round(value * 20.0) / 20.0)
+                }
+            )
+        case let .voiceChangerBass(title, valueText, value):
+            return ToastSliderItem(
+                presentationData: presentationData,
+                title: title,
+                valueText: valueText,
+                minValue: -12.0,
+                maxValue: 12.0,
+                value: value,
+                sectionId: self.section,
+                updated: { value in
+                    args.updateVoiceChangerBass(round(value))
+                }
+            )
+        case let .voiceChangerDistortion(title, valueText, value):
+            return ToastSliderItem(
+                presentationData: presentationData,
+                title: title,
+                valueText: valueText,
+                minValue: 0.0,
+                maxValue: 1.0,
+                value: value,
+                sectionId: self.section,
+                updated: { value in
+                    args.updateVoiceChangerDistortion(round(value * 20.0) / 20.0)
+                }
+            )
+        case let .voiceChangerReset(title):
+            return ItemListActionItem(presentationData: presentationData, title: title, kind: .generic, alignment: .center, sectionId: self.section, style: .blocks, action: {
+                args.resetVoiceEffects()
+            })
         case let .voiceChangerInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
 
@@ -268,9 +354,34 @@ private func toastSettingsEntries(settings: ToastSettings) -> [ToastSettingsEntr
 
         let echo = settings.voiceChangerEcho
         let echoText = "\(Int(echo * 100.0))%"
-        entries.append(.voiceChangerEcho("Echo / Space", echoText, echo))
+        entries.append(.voiceChangerEcho("Echo / Delay", echoText, echo))
+
+        let reverb = settings.voiceChangerReverb
+        let reverbText = "\(Int(reverb * 100.0))%"
+        entries.append(.voiceChangerReverb("Reverb / Space", reverbText, reverb))
+
+        let robot = settings.voiceChangerRobot
+        let robotText = "\(Int(robot * 100.0))%"
+        entries.append(.voiceChangerRobot("Robot / Cyber Mod", robotText, robot))
+
+        let bass = settings.voiceChangerBass
+        let bassText: String
+        if Int(bass) == 0 {
+            bassText = "0 dB"
+        } else if bass > 0 {
+            bassText = "+\(Int(bass)) dB"
+        } else {
+            bassText = "\(Int(bass)) dB"
+        }
+        entries.append(.voiceChangerBass("Bass Boost", bassText, bass))
+
+        let distortion = settings.voiceChangerDistortion
+        let distText = "\(Int(distortion * 100.0))%"
+        entries.append(.voiceChangerDistortion("Warm Overdrive", distText, distortion))
+
+        entries.append(.voiceChangerReset("Reset Voice Effects to Zero"))
     }
-    entries.append(.voiceChangerInfo("Transforms your voice in real time with customizable pitch shift and echo effects for recorded voice messages."))
+    entries.append(.voiceChangerInfo("Transforms your voice in real time with continuous pitch shift, echo delay, multi-tap reverb, cyber modulation, bass boost, and overdrive saturation."))
 
     entries.append(.backgroundHeader("NOTIFICATIONS & BACKGROUND"))
     entries.append(.backgroundKeepAlive("Keep Connection in Background", settings.backgroundKeepAlive))
@@ -310,6 +421,26 @@ public func toastSettingsController(context: AccountContext) -> ViewController {
         },
         updateVoiceChangerEcho: { value in
             ToastSettings.shared.voiceChangerEcho = value
+        },
+        updateVoiceChangerReverb: { value in
+            ToastSettings.shared.voiceChangerReverb = value
+        },
+        updateVoiceChangerRobot: { value in
+            ToastSettings.shared.voiceChangerRobot = value
+        },
+        updateVoiceChangerBass: { value in
+            ToastSettings.shared.voiceChangerBass = value
+        },
+        updateVoiceChangerDistortion: { value in
+            ToastSettings.shared.voiceChangerDistortion = value
+        },
+        resetVoiceEffects: {
+            ToastSettings.shared.voiceChangerPitch = 0.0
+            ToastSettings.shared.voiceChangerEcho = 0.0
+            ToastSettings.shared.voiceChangerReverb = 0.0
+            ToastSettings.shared.voiceChangerRobot = 0.0
+            ToastSettings.shared.voiceChangerBass = 0.0
+            ToastSettings.shared.voiceChangerDistortion = 0.0
         },
         toggleBackgroundKeepAlive: { value in
             ToastSettings.shared.backgroundKeepAlive = value
