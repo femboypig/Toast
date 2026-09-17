@@ -279,11 +279,11 @@
             [subscriber putCompletion];
             return nil;
         }
-        NSDictionary *headers = @{@"Host": @"dns.google.com"};
-        
-        return [[[MTHttpRequestOperation dataForHttpUrl:[NSURL URLWithString:[NSString stringWithFormat:@"https://google.com/resolve?name=%@", hostname]] headers:headers] mapToSignal:^MTSignal *(MTHttpResponse *response) {
-            NSData *data = response.data;
-            
+
+        NSString *(^parseDataBlock)(NSData *) = ^NSString *(NSData *data) {
+            if (!data) {
+                return nil;
+            }
             NSDictionary *dict = [NSJSONSerialization JSONObjectWithData:data options:0 error:nil];
             if ([dict respondsToSelector:@selector(objectForKey:)]) {
                 NSArray *answer = dict[@"Answer"];
@@ -301,18 +301,44 @@
                                     }
                                 }
                                 if (isIp) {
-                                    [self cacheIp:hostname ip:itemData];
-                                    return [MTSignal single:itemData];
+                                    return itemData;
                                 }
                             }
                         }
                     }
                 }
             }
-            [subscriber putNext:hostname];
-            [subscriber putCompletion];
             return nil;
-        }] startWithNext:^(id next) {
+        };
+
+        NSDictionary *cfHeaders = @{@"Accept": @"application/dns-json", @"Host": @"cloudflare-dns.com"};
+        NSURL *cfUrl = [NSURL URLWithString:[NSString stringWithFormat:@"https://1.1.1.1/dns-query?name=%@&type=A", hostname]];
+
+        NSDictionary *googleHeaders = @{@"Host": @"dns.google"};
+        NSURL *googleUrl = [NSURL URLWithString:[NSString stringWithFormat:@"https://8.8.8.8/resolve?name=%@", hostname]];
+
+        MTSignal *cfSignal = [[MTHttpRequestOperation dataForHttpUrl:cfUrl headers:cfHeaders] mapToSignal:^MTSignal *(MTHttpResponse *response) {
+            NSString *ip = parseDataBlock(response.data);
+            if (ip != nil) {
+                return [MTSignal single:ip];
+            }
+            return [MTSignal fail:nil];
+        }];
+
+        MTSignal *googleSignal = [[MTHttpRequestOperation dataForHttpUrl:googleUrl headers:googleHeaders] mapToSignal:^MTSignal *(MTHttpResponse *response) {
+            NSString *ip = parseDataBlock(response.data);
+            if (ip != nil) {
+                return [MTSignal single:ip];
+            }
+            return [MTSignal fail:nil];
+        }];
+
+        MTSignal *combined = [[cfSignal timeout:2.5 onQueue:[MTQueue concurrentDefaultQueue] orSignal:googleSignal] timeout:5.0 onQueue:[MTQueue concurrentDefaultQueue] orSignal:[MTSignal single:hostname]];
+
+        return [combined startWithNext:^(id next) {
+            if ([next respondsToSelector:@selector(characterAtIndex:)] && ![next isEqualToString:hostname]) {
+                [self cacheIp:hostname ip:(NSString *)next];
+            }
             [subscriber putNext:next];
             [subscriber putCompletion];
         } error:^(id error) {
