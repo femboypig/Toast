@@ -603,9 +603,9 @@ public func toastSettingsController(context: AccountContext) -> ViewController {
             if value && ToastSettings.shared.fakePasscode.isEmpty {
                 let setupController = PasscodeSetupController(context: context, mode: .setup(change: false, .digits4))
                 setupController.title = "Decoy Passcode"
-                setupController.complete = { [weak setupController] passcode, _ in
+                setupController.complete = { passcode, _ in
                     ToastSettings.shared.fakePasscode = passcode
-                    (setupController?.navigationController as? NavigationController)?.popViewController(animated: true) ?? popControllerImpl?()
+                    popControllerImpl?()
                 }
                 pushControllerImpl?(setupController)
             }
@@ -625,10 +625,10 @@ public func toastSettingsController(context: AccountContext) -> ViewController {
             if currentPasscode.isEmpty {
                 let setupController = PasscodeSetupController(context: context, mode: .setup(change: false, fieldType))
                 setupController.title = "Decoy Passcode"
-                setupController.complete = { [weak setupController] passcode, _ in
+                setupController.complete = { passcode, _ in
                     ToastSettings.shared.fakePasscode = passcode
                     ToastSettings.shared.fakePasscodeEnabled = true
-                    (setupController?.navigationController as? NavigationController)?.popViewController(animated: true) ?? popControllerImpl?()
+                    popControllerImpl?()
                 }
                 pushControllerImpl?(setupController)
             } else {
@@ -641,9 +641,9 @@ public func toastSettingsController(context: AccountContext) -> ViewController {
                     actionSheet?.dismissAnimated()
                     let setupController = PasscodeSetupController(context: context, mode: .setup(change: true, fieldType))
                     setupController.title = "Decoy Passcode"
-                    setupController.complete = { [weak setupController] passcode, _ in
+                    setupController.complete = { passcode, _ in
                         ToastSettings.shared.fakePasscode = passcode
-                        (setupController?.navigationController as? NavigationController)?.popViewController(animated: true) ?? popControllerImpl?()
+                        popControllerImpl?()
                     }
                     pushControllerImpl?(setupController)
                 }))
@@ -777,7 +777,7 @@ public func toastSettingsController(context: AccountContext) -> ViewController {
         controller?.present(c, in: .window(.root), with: a)
     }
     popControllerImpl = { [weak controller] in
-        (controller?.navigationController as? NavigationController)?.popViewController(animated: true)
+        let _ = (controller?.navigationController as? NavigationController)?.popViewController(animated: true)
     }
     return controller
 }
