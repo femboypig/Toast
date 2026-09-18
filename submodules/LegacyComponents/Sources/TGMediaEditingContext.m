@@ -231,6 +231,9 @@
         _highQualityPhotoPipe = [[SPipe alloc] init];
         _livePhotoModePipe = [[SPipe alloc] init];
         _forceLivePhotoPipe = [[SPipe alloc] init];
+        if ([[NSUserDefaults standardUserDefaults] boolForKey:@"Toast_sendOriginalMedia"]) {
+            _highQualityPhoto = true;
+        }
     }
     return self;
 }
@@ -969,6 +972,9 @@
 }
 
 - (bool)isHighQualityPhoto {
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:@"Toast_sendOriginalMedia"]) {
+        return true;
+    }
     return _highQualityPhoto;
 }
 
