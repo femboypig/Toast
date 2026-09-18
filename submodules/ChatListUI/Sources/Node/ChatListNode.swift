@@ -1322,6 +1322,9 @@ public final class ChatListNode: ListViewImpl {
     private let chatListLocation = ValuePromise<ChatListNodeLocation>()
     private let chatListDisposable = MetaDisposable()
     private var activityStatusesDisposable: Disposable?
+    private var toastVersion: Int = 0
+    private let toastVersionPromise = ValuePromise<Int>(0, ignoreRepeated: false)
+    private var toastSettingsDisposable: Disposable?
     
     private let scrollToTopOptionPromise = Promise<ChatListGlobalScrollOption>(.none)
     public var scrollToTopOption: Signal<ChatListGlobalScrollOption, NoError> {
@@ -1421,6 +1424,20 @@ public final class ChatListNode: ListViewImpl {
         self.scrollHeightTopInset = ChatListNavigationBar.searchScrollHeight
         
         super.init()
+        
+        self.toastSettingsDisposable = (Signal<Void, NoError> { subscriber in
+            let observer = NotificationCenter.default.addObserver(forName: NSNotification.Name("ToastSettingsUpdated"), object: nil, queue: OperationQueue.main) { _ in
+                subscriber.putNext(())
+            }
+            return ActionDisposable {
+                NotificationCenter.default.removeObserver(observer)
+            }
+        }
+        |> deliverOnMainQueue).start(next: { [weak self] _ in
+            guard let strongSelf = self else { return }
+            strongSelf.toastVersion += 1
+            strongSelf.toastVersionPromise.set(strongSelf.toastVersion)
+        })
         
         if case .internal = context.sharedContext.applicationBindings.appBuildType {
             //self.useMainQueueTransactions = true
@@ -2190,9 +2207,10 @@ public final class ChatListNode: ListViewImpl {
             self.statePromise.get(),
             contacts,
             chatListFilters,
-            accountIsPremium
+            accountIsPremium,
+            self.toastVersionPromise.get()
         )
-        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, savedMessagesPeer, updateAndFilter, state, contacts, chatListFilters, accountIsPremium) -> Signal<ChatListNodeListViewTransition, NoError> in
+        |> mapToQueue { (hideArchivedFolderByDefault, displayArchiveIntro, storageInfo, savedMessagesPeer, updateAndFilter, state, contacts, chatListFilters, accountIsPremium, _) -> Signal<ChatListNodeListViewTransition, NoError> in
             let (update, filter) = updateAndFilter
             
             let previousHideArchivedFolderByDefaultValue = previousHideArchivedFolderByDefault.swap(hideArchivedFolderByDefault)
@@ -3191,6 +3209,7 @@ public final class ChatListNode: ListViewImpl {
     }
     
     deinit {
+        self.toastSettingsDisposable?.dispose()
         self.chatListDisposable.dispose()
         self.activityStatusesDisposable?.dispose()
         self.updatedFilterDisposable.dispose()
