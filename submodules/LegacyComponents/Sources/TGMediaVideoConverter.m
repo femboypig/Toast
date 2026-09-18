@@ -889,6 +889,9 @@
     if ([adjustments isKindOfClass:[TGMediaVideoEditAdjustments class]]) {
         preset = adjustments.preset;
     }
+    if ([[NSUserDefaults standardUserDefaults] boolForKey:@"Toast_sendOriginalMedia"]) {
+        return TGMediaVideoConversionPresetPassthrough;
+    }
     if (preset == TGMediaVideoConversionPresetCompressedDefault)
     {
         NSNumber *presetValue = [[NSUserDefaults standardUserDefaults] objectForKey:@"TG_preferredVideoPreset_v0"];
@@ -1285,6 +1288,9 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
         case TGMediaVideoConversionPresetCompressedVeryHigh:
             return (CGSize){ 1920.0f, 1920.0f };
             
+        case TGMediaVideoConversionPresetPassthrough:
+            return (CGSize){ 4096.0f, 4096.0f };
+            
         case TGMediaVideoConversionPresetVideoMessage:
             return (CGSize){ 384.0f, 384.0f };
         
@@ -1424,6 +1430,9 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
         case TGMediaVideoConversionPresetCompressedVeryHigh:
             return 6600;
             
+        case TGMediaVideoConversionPresetPassthrough:
+            return 20000;
+            
         case TGMediaVideoConversionPresetVideoMessage:
             return 1000;
             
@@ -1462,6 +1471,9 @@ static CGFloat progressOfSampleBufferInTimeRange(CMSampleBufferRef sampleBuffer,
             
         case TGMediaVideoConversionPresetCompressedVeryHigh:
             return 64;
+            
+        case TGMediaVideoConversionPresetPassthrough:
+            return 256;
             
         case TGMediaVideoConversionPresetVideoMessage:
             return 64;
