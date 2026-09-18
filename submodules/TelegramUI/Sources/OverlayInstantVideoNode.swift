@@ -12,7 +12,7 @@ import AccountContext
 import AVKit
 import CoreMedia
 
-final class OverlayInstantVideoNode: OverlayMediaItemNode, AVPictureInPictureSampleBufferPlaybackDelegate {
+final class OverlayInstantVideoNode: OverlayMediaItemNode, AVPictureInPictureSampleBufferPlaybackDelegate, AVPictureInPictureControllerDelegate {
     private let content: UniversalVideoContent
     private let videoNode: UniversalVideoNode
     private let decoration: OverlayInstantVideoDecoration
@@ -20,6 +20,7 @@ final class OverlayInstantVideoNode: OverlayMediaItemNode, AVPictureInPictureSam
     private let close: () -> Void
     
     private var validLayoutSize: CGSize?
+    private var pipController: AVPictureInPictureController?
     
     override var group: OverlayMediaItemNodeGroup? {
         return OverlayMediaItemNodeGroup(rawValue: 1)
@@ -64,6 +65,9 @@ final class OverlayInstantVideoNode: OverlayMediaItemNode, AVPictureInPictureSam
                 strongSelf.hasAttachedContext = value
                 if previous != value {
                     strongSelf.hasAttachedContextUpdated?(value)
+                }
+                if value && strongSelf.pipController == nil {
+                    strongSelf.setupPictureInPicture()
                 }
             }
         }
@@ -187,5 +191,41 @@ final class OverlayInstantVideoNode: OverlayMediaItemNode, AVPictureInPictureSam
 
     public func pictureInPictureControllerShouldProhibitBackgroundAudioPlayback(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
         return false
+    }
+
+    private func setupPictureInPicture() {
+        if #available(iOSApplicationExtension 15.0, iOS 15.0, *) {
+            guard AVPictureInPictureController.isPictureInPictureSupported(), let source = self.makeNativeContentSource() else {
+                return
+            }
+            let pipController = AVPictureInPictureController(contentSource: source)
+            pipController.delegate = self
+            pipController.canStartPictureInPictureAutomaticallyFromInline = true
+            self.pipController = pipController
+        }
+    }
+
+    public func startPictureInPicture() {
+        if #available(iOSApplicationExtension 15.0, iOS 15.0, *) {
+            if let pipController = self.pipController, pipController.isPictureInPicturePossible {
+                pipController.startPictureInPicture()
+            }
+        }
+    }
+
+    public func pictureInPictureControllerWillStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+    }
+
+    public func pictureInPictureControllerDidStartPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+    }
+
+    public func pictureInPictureControllerWillStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+    }
+
+    public func pictureInPictureControllerDidStopPictureInPicture(_ pictureInPictureController: AVPictureInPictureController) {
+    }
+
+    public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, restoreUserInterfaceForPictureInPictureStopWithCompletionHandler completionHandler: @escaping (Bool) -> Void) {
+        completionHandler(true)
     }
 }
