@@ -640,7 +640,12 @@ public class AdMessagesHistoryContext {
             
             self.impl.with { impl in
                 let stateDisposable = impl.state.get().start(next: { state in
-                    subscriber.putNext((state.interPostInterval, state.messages, state.startDelay, state.betweenDelay))
+                    let blockAds = UserDefaults.standard.object(forKey: "Toast_blockChannelAds") as? Bool ?? true
+                    if blockAds {
+                        subscriber.putNext((nil, [], nil, nil))
+                    } else {
+                        subscriber.putNext((state.interPostInterval, state.messages, state.startDelay, state.betweenDelay))
+                    }
                 })
                 disposable.set(stateDisposable)
             }
