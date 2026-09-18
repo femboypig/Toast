@@ -650,8 +650,16 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
         pinnedIndexOffset += UInt16(groupEntryCount)
     }
     
+    let blockAds = UserDefaults.standard.object(forKey: "Toast_blockChannelAds") as? Bool ?? true
+    let blockProxy = UserDefaults.standard.object(forKey: "Toast_blockProxySponsor") as? Bool ?? true
     let filteredAdditionalItemEntries = view.additionalItems.filter { item -> Bool in
-        return item.item.renderedPeer.peerId != state.hiddenPsaPeerId
+        if item.item.renderedPeer.peerId == state.hiddenPsaPeerId {
+            return false
+        }
+        if (blockAds || blockProxy), case .proxy = item.promoInfo.content {
+            return false
+        }
+        return true
     }
     
     var foundPeerIds = Set<EnginePeer.Id>()
@@ -685,15 +693,53 @@ func chatListNodeEntriesForView(view: EngineChatList, state: ChatListNodeState, 
         }
         if UserDefaults.standard.bool(forKey: "Toast_isDecoyActive") {
             if let peerId = peerId {
-                if peerId.namespace == Namespaces.Peer.SecretChat {
-                    continue loop
-                }
-                if UserDefaults.standard.bool(forKey: "Toast_decoyChannelsOnly") && (peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat) {
-                    continue loop
-                }
                 let hiddenPeerIds = UserDefaults.standard.array(forKey: "Toast_decoyHiddenPeerIds") as? [Int64] ?? []
                 if hiddenPeerIds.contains(peerId.toInt64()) {
                     continue loop
+                }
+                let hidePrivate = UserDefaults.standard.bool(forKey: "Toast_decoyHidePrivateChats")
+                let hideSecret = UserDefaults.standard.object(forKey: "Toast_decoyHideSecretChats") as? Bool ?? true
+                let hideChannels = UserDefaults.standard.bool(forKey: "Toast_decoyHideChannels")
+                let hideGroups = UserDefaults.standard.bool(forKey: "Toast_decoyHideGroups")
+                let channelsOnly = UserDefaults.standard.bool(forKey: "Toast_decoyChannelsOnly")
+
+                if hideSecret && peerId.namespace == Namespaces.Peer.SecretChat {
+                    continue loop
+                }
+                if hidePrivate && peerId.namespace == Namespaces.Peer.CloudUser {
+                    continue loop
+                }
+                if channelsOnly && (peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat || peerId.namespace == Namespaces.Peer.CloudGroup) {
+                    continue loop
+                }
+                if let mainPeer = entry.renderedPeer.chatMainPeer {
+                    switch mainPeer {
+                    case let .channel(channel):
+                        switch channel.info {
+                        case .broadcast:
+                            if hideChannels {
+                                continue loop
+                            }
+                        case .group:
+                            if hideGroups || channelsOnly {
+                                continue loop
+                            }
+                        }
+                    case .legacyGroup:
+                        if hideGroups || channelsOnly {
+                            continue loop
+                        }
+                    case .user:
+                        if hidePrivate {
+                            continue loop
+                        }
+                    case .secretChat:
+                        if hideSecret {
+                            continue loop
+                        }
+                    default:
+                        break
+                    }
                 }
             }
         }
