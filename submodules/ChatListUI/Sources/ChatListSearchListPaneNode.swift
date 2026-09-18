@@ -48,6 +48,34 @@ private func isIncludedCommunityContainer(_ peer: EnginePeer?, filter: ChatListN
     }
 }
 
+private func isDecoyPeerHidden(peerId: EnginePeer.Id) -> Bool {
+    guard UserDefaults.standard.bool(forKey: "Toast_isDecoyActive") else {
+        return false
+    }
+    let hiddenPeerIds = UserDefaults.standard.array(forKey: "Toast_decoyHiddenPeerIds") as? [Int64] ?? []
+    if hiddenPeerIds.contains(peerId.toInt64()) {
+        return true
+    }
+    let hidePrivate = UserDefaults.standard.bool(forKey: "Toast_decoyHidePrivateChats")
+    let hideSecret = UserDefaults.standard.object(forKey: "Toast_decoyHideSecretChats") as? Bool ?? true
+    let hideChannels = UserDefaults.standard.bool(forKey: "Toast_decoyHideChannels")
+    let channelsOnly = UserDefaults.standard.bool(forKey: "Toast_decoyChannelsOnly")
+
+    if hideSecret && peerId.namespace == Namespaces.Peer.SecretChat {
+        return true
+    }
+    if hidePrivate && peerId.namespace == Namespaces.Peer.CloudUser {
+        return true
+    }
+    if channelsOnly && (peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat || peerId.namespace == Namespaces.Peer.CloudGroup) {
+        return true
+    }
+    if hideChannels && peerId.namespace == Namespaces.Peer.CloudChannel {
+        return true
+    }
+    return false
+}
+
 private enum ChatListRecentEntryStableId: Hashable {
     case topPeers
     case peerId(EnginePeer.Id, ChatListRecentEntry.Section)
@@ -2170,18 +2198,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                     }
 
                     for item in downloadItems.inProgressItems.sorted(by: { $0.priority < $1.priority }) {
-                        if UserDefaults.standard.bool(forKey: "Toast_isDecoyActive") {
-                            let peerId = item.message.id.peerId
-                            if peerId.namespace == Namespaces.Peer.SecretChat {
-                                continue
-                            }
-                            if (UserDefaults.standard.object(forKey: "Toast_decoyChannelsOnly") as? Bool ?? true) && (peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat) {
-                                continue
-                            }
-                            let hiddenPeerIds = UserDefaults.standard.array(forKey: "Toast_decoyHiddenPeerIds") as? [Int64] ?? []
-                            if hiddenPeerIds.contains(peerId.toInt64()) {
-                                continue
-                            }
+                        if isDecoyPeerHidden(peerId: item.message.id.peerId) {
+                            continue
                         }
                         if existingMessageIds.contains(item.message.id) {
                             continue
@@ -2211,18 +2229,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         entries.append(.message(message, peer, nil, nil, presentationData, 1, nil, false, .downloading(item.priority), resource, .downloading, allPaused, nil, false, .everywhere))
                     }
                     for item in downloadItems.doneItems.sorted(by: { ChatListSearchEntry.MessageOrderingKey.downloaded(timestamp: $0.timestamp, index: $0.message.index) < ChatListSearchEntry.MessageOrderingKey.downloaded(timestamp: $1.timestamp, index: $1.message.index) }) {
-                        if UserDefaults.standard.bool(forKey: "Toast_isDecoyActive") {
-                            let peerId = item.message.id.peerId
-                            if peerId.namespace == Namespaces.Peer.SecretChat {
-                                continue
-                            }
-                            if (UserDefaults.standard.object(forKey: "Toast_decoyChannelsOnly") as? Bool ?? true) && (peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat) {
-                                continue
-                            }
-                            let hiddenPeerIds = UserDefaults.standard.array(forKey: "Toast_decoyHiddenPeerIds") as? [Int64] ?? []
-                            if hiddenPeerIds.contains(peerId.toInt64()) {
-                                continue
-                            }
+                        if isDecoyPeerHidden(peerId: item.message.id.peerId) {
+                            continue
                         }
                         if !item.isSeen {
                             Queue.mainQueue().async {
@@ -3057,17 +3065,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                         return false
                     }
 
-                    if UserDefaults.standard.bool(forKey: "Toast_isDecoyActive") {
-                        if peer.id.namespace == Namespaces.Peer.SecretChat {
-                            return false
-                        }
-                        if (UserDefaults.standard.object(forKey: "Toast_decoyChannelsOnly") as? Bool ?? true) && (peer.id.namespace == Namespaces.Peer.CloudUser || peer.id.namespace == Namespaces.Peer.SecretChat) {
-                            return false
-                        }
-                        let hiddenPeerIds = UserDefaults.standard.array(forKey: "Toast_decoyHiddenPeerIds") as? [Int64] ?? []
-                        if hiddenPeerIds.contains(peer.id.toInt64()) {
-                            return false
-                        }
+                    if isDecoyPeerHidden(peerId: peer.id) {
+                        return false
                     }
 
                     if let requestPeerType {
@@ -3420,18 +3419,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
 
                 if let message = resolvedMessage {
                     var skip = false
-                    if UserDefaults.standard.bool(forKey: "Toast_isDecoyActive") {
-                        let peerId = message.id.peerId
-                        if peerId.namespace == Namespaces.Peer.SecretChat {
-                            skip = true
-                        } else if (UserDefaults.standard.object(forKey: "Toast_decoyChannelsOnly") as? Bool ?? true) && (peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat) {
-                            skip = true
-                        } else {
-                            let hiddenPeerIds = UserDefaults.standard.array(forKey: "Toast_decoyHiddenPeerIds") as? [Int64] ?? []
-                            if hiddenPeerIds.contains(peerId.toInt64()) {
-                                skip = true
-                            }
-                        }
+                    if isDecoyPeerHidden(peerId: message.id.peerId) {
+                        skip = true
                     }
                     if !skip {
                         var peer = EngineRenderedPeer(message: message)
@@ -3455,18 +3444,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                             if existingPostIds.contains(message.id) {
                                 continue
                             }
-                            if UserDefaults.standard.bool(forKey: "Toast_isDecoyActive") {
-                                let peerId = message.id.peerId
-                                if peerId.namespace == Namespaces.Peer.SecretChat {
-                                    continue
-                                }
-                                if (UserDefaults.standard.object(forKey: "Toast_decoyChannelsOnly") as? Bool ?? true) && (peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat) {
-                                    continue
-                                }
-                                let hiddenPeerIds = UserDefaults.standard.array(forKey: "Toast_decoyHiddenPeerIds") as? [Int64] ?? []
-                                if hiddenPeerIds.contains(peerId.toInt64()) {
-                                    continue
-                                }
+                            if isDecoyPeerHidden(peerId: message.id.peerId) {
+                                continue
                             }
                             existingPostIds.insert(message.id)
 
@@ -3494,18 +3473,8 @@ final class ChatListSearchListPaneNode: ASDisplayNode, ChatListSearchPaneNode {
                                 if existingMessageIds.contains(message.id) {
                                     continue
                                 }
-                                if UserDefaults.standard.bool(forKey: "Toast_isDecoyActive") {
-                                    let peerId = message.id.peerId
-                                    if peerId.namespace == Namespaces.Peer.SecretChat {
-                                        continue
-                                    }
-                                    if (UserDefaults.standard.object(forKey: "Toast_decoyChannelsOnly") as? Bool ?? true) && (peerId.namespace == Namespaces.Peer.CloudUser || peerId.namespace == Namespaces.Peer.SecretChat) {
-                                        continue
-                                    }
-                                    let hiddenPeerIds = UserDefaults.standard.array(forKey: "Toast_decoyHiddenPeerIds") as? [Int64] ?? []
-                                    if hiddenPeerIds.contains(peerId.toInt64()) {
-                                        continue
-                                    }
+                                if isDecoyPeerHidden(peerId: message.id.peerId) {
+                                    continue
                                 }
                                 existingMessageIds.insert(message.id)
 
