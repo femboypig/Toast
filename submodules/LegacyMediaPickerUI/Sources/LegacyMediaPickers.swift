@@ -441,7 +441,7 @@ public func legacyAssetPickerEnqueueMessages(
                                                 var finalDimensions: CGSize = dimensions
                                                 var finalDuration: Double = duration
  
-                                                let preset: TGMediaVideoConversionPreset = sendOriginal ? TGMediaVideoConversionPresetCompressedVeryHigh : TGMediaVideoConversionPresetCompressedMedium
+                                                let preset: TGMediaVideoConversionPreset = sendOriginal ? TGMediaVideoConversionPresetPassthrough : TGMediaVideoConversionPresetCompressedMedium
                                                 finalDimensions = TGMediaVideoConverter.dimensions(for: finalDimensions, adjustments: adjustments, preset: preset)
                                                 
                                                 var resourceAdjustments: VideoMediaResourceAdjustments?
@@ -877,8 +877,8 @@ public func legacyAssetPickerEnqueueMessages(
                         
                             let defaultPreset = TGMediaVideoConversionPreset(rawValue: UInt32(UserDefaults.standard.integer(forKey: "TG_preferredVideoPreset_v0")))
                             let sendOriginal = UserDefaults.standard.object(forKey: "Toast_sendOriginalMedia") as? Bool ?? false
-                            var preset: TGMediaVideoConversionPreset = sendOriginal ? TGMediaVideoConversionPresetCompressedVeryHigh : TGMediaVideoConversionPresetCompressedMedium
-                            if let selectedPreset = adjustments?.preset {
+                            var preset: TGMediaVideoConversionPreset = sendOriginal ? TGMediaVideoConversionPresetPassthrough : TGMediaVideoConversionPresetCompressedMedium
+                            if !sendOriginal, let selectedPreset = adjustments?.preset {
                                 preset = selectedPreset
                             } else if preset == TGMediaVideoConversionPresetCompressedDefault && defaultPreset != TGMediaVideoConversionPresetCompressedDefault {
                                 preset = defaultPreset
