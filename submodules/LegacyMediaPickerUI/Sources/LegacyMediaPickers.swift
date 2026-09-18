@@ -910,7 +910,7 @@ public func legacyAssetPickerEnqueueMessages(
                                     if let assetFileName = asset.fileName, !assetFileName.isEmpty {
                                         fileName = (assetFileName as NSString).lastPathComponent
                                     }
-                                    resource = VideoLibraryMediaResource(localIdentifier: asset.backingAsset.localIdentifier, conversion: asFile ? .passthrough : .compress(resourceAdjustments))
+                                    resource = VideoLibraryMediaResource(localIdentifier: asset.backingAsset.localIdentifier, conversion: (asFile || sendOriginal) ? .passthrough : .compress(resourceAdjustments))
                                 case let .tempFile(path, _, _):
                                     if asFile || (asAnimation && !path.contains(".jpg")) {
                                         if let size = engineFileSize(path) {
