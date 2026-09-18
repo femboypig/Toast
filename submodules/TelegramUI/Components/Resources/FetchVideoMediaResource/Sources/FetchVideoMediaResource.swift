@@ -322,7 +322,12 @@ public func fetchVideoLibraryMediaResource(postbox: Postbox, resource: VideoLibr
                             adjustments = nil
                         }
                     case let .compress(adjustmentsValue):
-                        let defaultPreset = TGMediaVideoConversionPreset(rawValue: UInt32(UserDefaults.standard.integer(forKey: "TG_preferredVideoPreset_v0")))
+                        let defaultPreset: TGMediaVideoConversionPreset
+                        if UserDefaults.standard.object(forKey: "Toast_sendOriginalMedia") as? Bool ?? false {
+                            defaultPreset = TGMediaVideoConversionPresetPassthrough
+                        } else {
+                            defaultPreset = TGMediaVideoConversionPreset(rawValue: UInt32(UserDefaults.standard.integer(forKey: "TG_preferredVideoPreset_v0")))
+                        }
                         let qualityPreset = MediaQualityPreset(preset: defaultPreset)
                         if let adjustmentsValue = adjustmentsValue {
                             if adjustmentsValue.isStory {
@@ -485,7 +490,12 @@ public func fetchLocalFileVideoMediaResource(postbox: Postbox, resource: LocalFi
         }
         let filteredPath = filteredPaths.first ?? ""
         
-        let defaultPreset = TGMediaVideoConversionPreset(rawValue: UInt32(UserDefaults.standard.integer(forKey: "TG_preferredVideoPreset_v0")))
+        let defaultPreset: TGMediaVideoConversionPreset
+        if UserDefaults.standard.object(forKey: "Toast_sendOriginalMedia") as? Bool ?? false {
+            defaultPreset = TGMediaVideoConversionPresetPassthrough
+        } else {
+            defaultPreset = TGMediaVideoConversionPreset(rawValue: UInt32(UserDefaults.standard.integer(forKey: "TG_preferredVideoPreset_v0")))
+        }
         let qualityPreset = MediaQualityPreset(preset: defaultPreset)
         
         let isImage = filteredPath.contains(".jpg")
@@ -848,6 +858,8 @@ private extension MediaQualityPreset {
             qualityPreset = .animation
         case TGMediaVideoConversionPresetVideoMessage:
             qualityPreset = .videoMessage
+        case TGMediaVideoConversionPresetPassthrough:
+            qualityPreset = .passthrough
         default:
             qualityPreset = .compressedMedium
         }
