@@ -1757,9 +1757,6 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
                 hasAvatar = true
             } else {
                 effectiveAuthor = firstMessage.author
-                if effectiveAuthor == nil && (UserDefaults.standard.object(forKey: "Toast_showAvatarsInDirectChats") as? Bool ?? true) {
-                    effectiveAuthor = firstMessage.peers[firstMessage.id.peerId]
-                }
                 
                 var allowAuthor = incoming
                 
@@ -1812,8 +1809,7 @@ public class ChatMessageBubbleItemNode: ChatMessageItemView, ChatMessagePreviewI
             }
         
             if !peerId.isRepliesOrSavedMessages(accountPeerId: item.context.account.peerId) {
-                let showAvatarsInDirect = UserDefaults.standard.object(forKey: "Toast_showAvatarsInDirectChats") as? Bool ?? true
-                if (peerId.isGroupOrChannel || showAvatarsInDirect) && effectiveAuthor != nil {
+                if peerId.isGroupOrChannel && effectiveAuthor != nil {
                     var isBroadcastChannel = false
                     var isMonoForum = false
                     if let peer = firstMessage.peers[firstMessage.id.peerId] as? TelegramChannel {
