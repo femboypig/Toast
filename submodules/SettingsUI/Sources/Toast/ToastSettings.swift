@@ -27,39 +27,6 @@ public enum ToastVoiceChangerMode: String, CaseIterable {
     }
 }
 
-public enum ToastBypassLevel: String, CaseIterable {
-    case off = "off"
-    case low = "low"
-    case medium = "medium"
-    case max = "max"
-
-    public var title: String {
-        switch self {
-        case .off:
-            return "Disabled"
-        case .low:
-            return "Low (DoH)"
-        case .medium:
-            return "Medium (DoH + TCP Split)"
-        case .max:
-            return "Max (Full Bypass + MTProxy)"
-        }
-    }
-
-    public var detailText: String {
-        switch self {
-        case .off:
-            return "Standard connection without anti-censorship routing"
-        case .low:
-            return "Encrypted DNS-over-HTTPS via Cloudflare & Google direct-IP"
-        case .medium:
-            return "DoH + TCP handshake packet splitting to evade ISP DPI/TSPU"
-        case .max:
-            return "DoH + TCP split + auto-rotating Fake-TLS MTProxy pool with health checks"
-        }
-    }
-}
-
 public final class ToastSettings {
     public static let shared = ToastSettings()
 
@@ -78,15 +45,19 @@ public final class ToastSettings {
     private let voiceChangerModeKey = "Toast_voiceChangerMode"
     private let backgroundKeepAliveKey = "Toast_backgroundKeepAlive"
     private let localNotificationsEnabledKey = "Toast_localNotificationsEnabled"
-    private let bypassLevelKey = "Toast_bypassLevel"
-    private let showAvatarsInDirectChatsKey = "Toast_showAvatarsInDirectChats"
     private let blockChannelAdsKey = "Toast_blockChannelAds"
+    private let blockProxySponsorKey = "Toast_blockProxySponsor"
     private let sendOriginalMediaKey = "Toast_sendOriginalMedia"
     private let freeVoiceToTextKey = "Toast_freeVoiceToText"
     private let forwardWithoutQuoteKey = "Toast_forwardWithoutQuote"
     private let fakePasscodeEnabledKey = "Toast_fakePasscodeEnabled"
     private let fakePasscodeKey = "Toast_fakePasscode"
     private let decoyChannelsOnlyKey = "Toast_decoyChannelsOnly"
+    private let decoyHidePrivateChatsKey = "Toast_decoyHidePrivateChats"
+    private let decoyHideSecretChatsKey = "Toast_decoyHideSecretChats"
+    private let decoyHideChannelsKey = "Toast_decoyHideChannels"
+    private let decoyHideGroupsKey = "Toast_decoyHideGroups"
+    private let decoyHiddenPeerIdsKey = "Toast_decoyHiddenPeerIds"
     private let isDecoyActiveKey = "Toast_isDecoyActive"
 
     private let updatedPromise = ValuePromise<Bool>(true, ignoreRepeated: false)
@@ -108,17 +79,26 @@ public final class ToastSettings {
             self.voiceChangerDistortionKey: Float(0.0),
             self.backgroundKeepAliveKey: true,
             self.localNotificationsEnabledKey: true,
-            self.bypassLevelKey: ToastBypassLevel.max.rawValue,
-            self.showAvatarsInDirectChatsKey: true,
             self.blockChannelAdsKey: true,
+            self.blockProxySponsorKey: true,
             self.sendOriginalMediaKey: false,
             self.freeVoiceToTextKey: true,
             self.forwardWithoutQuoteKey: false,
             self.fakePasscodeEnabledKey: false,
             self.fakePasscodeKey: "",
-            self.decoyChannelsOnlyKey: true,
+            self.decoyChannelsOnlyKey: false,
+            self.decoyHidePrivateChatsKey: false,
+            self.decoyHideSecretChatsKey: true,
+            self.decoyHideChannelsKey: false,
+            self.decoyHideGroupsKey: false,
+            self.decoyHiddenPeerIdsKey: [],
             self.isDecoyActiveKey: false
         ])
+    }
+
+    private func notifyUpdated() {
+        self.updatedPromise.set(true)
+        NotificationCenter.default.post(name: NSNotification.Name("ToastSettingsUpdated"), object: nil)
     }
 
     public var saveDisappearingMedia: Bool {
@@ -127,7 +107,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.saveDisappearingMediaKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
@@ -137,7 +117,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.allowScreenshotsKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
@@ -147,7 +127,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.allowSavingProtectedContentKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
@@ -157,7 +137,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.voiceChangerEnabledKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
@@ -167,7 +147,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.voiceChangerPitchKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
@@ -177,7 +157,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.voiceChangerEchoKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
@@ -187,7 +167,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.voiceChangerReverbKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
@@ -197,7 +177,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.voiceChangerRobotKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
@@ -207,7 +187,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.voiceChangerBassKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
@@ -217,7 +197,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.voiceChangerDistortionKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
@@ -235,7 +215,7 @@ public final class ToastSettings {
         set {
             self.defaults.set(newValue.rawValue, forKey: self.voiceChangerModeKey)
             self.voiceChangerEnabled = (newValue != .off)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
@@ -245,7 +225,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.backgroundKeepAliveKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
@@ -255,32 +235,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.localNotificationsEnabledKey)
-            self.updatedPromise.set(true)
-        }
-    }
-
-    public var bypassLevel: ToastBypassLevel {
-        get {
-            if let rawValue = self.defaults.string(forKey: self.bypassLevelKey),
-               let level = ToastBypassLevel(rawValue: rawValue) {
-                return level
-            }
-            return .max
-        }
-        set {
-            self.defaults.set(newValue.rawValue, forKey: self.bypassLevelKey)
-            ToastAntiCensorship.shared.applyCurrentLevel()
-            self.updatedPromise.set(true)
-        }
-    }
-
-    public var showAvatarsInDirectChats: Bool {
-        get {
-            return self.defaults.object(forKey: self.showAvatarsInDirectChatsKey) as? Bool ?? true
-        }
-        set {
-            self.defaults.set(newValue, forKey: self.showAvatarsInDirectChatsKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
@@ -290,7 +245,17 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.blockChannelAdsKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
+        }
+    }
+
+    public var blockProxySponsor: Bool {
+        get {
+            return self.defaults.object(forKey: self.blockProxySponsorKey) as? Bool ?? true
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.blockProxySponsorKey)
+            self.notifyUpdated()
         }
     }
 
@@ -300,7 +265,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.sendOriginalMediaKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
@@ -310,7 +275,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.freeVoiceToTextKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
@@ -320,7 +285,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.forwardWithoutQuoteKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
@@ -330,7 +295,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.fakePasscodeEnabledKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
@@ -340,17 +305,83 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.fakePasscodeKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
     public var decoyChannelsOnly: Bool {
         get {
-            return self.defaults.object(forKey: self.decoyChannelsOnlyKey) as? Bool ?? true
+            return self.defaults.object(forKey: self.decoyChannelsOnlyKey) as? Bool ?? false
         }
         set {
             self.defaults.set(newValue, forKey: self.decoyChannelsOnlyKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
+        }
+    }
+
+    public var decoyHidePrivateChats: Bool {
+        get {
+            return self.defaults.object(forKey: self.decoyHidePrivateChatsKey) as? Bool ?? false
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.decoyHidePrivateChatsKey)
+            self.notifyUpdated()
+        }
+    }
+
+    public var decoyHideSecretChats: Bool {
+        get {
+            return self.defaults.object(forKey: self.decoyHideSecretChatsKey) as? Bool ?? true
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.decoyHideSecretChatsKey)
+            self.notifyUpdated()
+        }
+    }
+
+    public var decoyHideChannels: Bool {
+        get {
+            return self.defaults.object(forKey: self.decoyHideChannelsKey) as? Bool ?? false
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.decoyHideChannelsKey)
+            self.notifyUpdated()
+        }
+    }
+
+    public var decoyHideGroups: Bool {
+        get {
+            return self.defaults.object(forKey: self.decoyHideGroupsKey) as? Bool ?? false
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.decoyHideGroupsKey)
+            self.notifyUpdated()
+        }
+    }
+
+    public var decoyHiddenPeerIds: [Int64] {
+        get {
+            return self.defaults.array(forKey: self.decoyHiddenPeerIdsKey) as? [Int64] ?? []
+        }
+        set {
+            self.defaults.set(newValue, forKey: self.decoyHiddenPeerIdsKey)
+            self.notifyUpdated()
+        }
+    }
+
+    public func addDecoyHiddenPeerId(_ id: Int64) {
+        var current = self.decoyHiddenPeerIds
+        if !current.contains(id) {
+            current.append(id)
+            self.decoyHiddenPeerIds = current
+        }
+    }
+
+    public func removeDecoyHiddenPeerId(_ id: Int64) {
+        var current = self.decoyHiddenPeerIds
+        if let index = current.firstIndex(of: id) {
+            current.remove(at: index)
+            self.decoyHiddenPeerIds = current
         }
     }
 
@@ -360,7 +391,7 @@ public final class ToastSettings {
         }
         set {
             self.defaults.set(newValue, forKey: self.isDecoyActiveKey)
-            self.updatedPromise.set(true)
+            self.notifyUpdated()
         }
     }
 
@@ -378,16 +409,20 @@ public final class ToastSettings {
         self.voiceChangerMode = .off
         self.backgroundKeepAlive = true
         self.localNotificationsEnabled = true
-        self.bypassLevel = .max
-        self.showAvatarsInDirectChats = true
         self.blockChannelAds = true
+        self.blockProxySponsor = true
         self.sendOriginalMedia = false
         self.freeVoiceToText = true
         self.forwardWithoutQuote = false
         self.fakePasscodeEnabled = false
         self.fakePasscode = ""
-        self.decoyChannelsOnly = true
+        self.decoyChannelsOnly = false
+        self.decoyHidePrivateChats = false
+        self.decoyHideSecretChats = true
+        self.decoyHideChannels = false
+        self.decoyHideGroups = false
+        self.decoyHiddenPeerIds = []
         self.isDecoyActive = false
-        self.updatedPromise.set(true)
+        self.notifyUpdated()
     }
 }
