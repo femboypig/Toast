@@ -984,8 +984,10 @@ static TGVideoEditAdjustments *TGMediaAssetsPatchedLivePhotoAdjustments(PGPhotoE
     if (selectedItems.count == 0 && currentItem != nil)
         [selectedItems addObject:currentItem];
     
-    if (intent == TGMediaAssetsControllerSendMediaIntent)
-        [[NSUserDefaults standardUserDefaults] setObject:@(editingContext.isHighQualityPhoto) forKey:@"TG_photoHighQuality_v0"];
+    if (intent == TGMediaAssetsControllerSendMediaIntent) {
+        bool highQuality = editingContext.isHighQualityPhoto || [[NSUserDefaults standardUserDefaults] boolForKey:@"Toast_sendOriginalMedia"];
+        [[NSUserDefaults standardUserDefaults] setObject:@(highQuality) forKey:@"TG_photoHighQuality_v0"];
+    }
     
     if (saveEditedPhotos && storeAssets && editingContext != nil)
     {
@@ -1048,7 +1050,7 @@ static TGVideoEditAdjustments *TGMediaAssetsPatchedLivePhotoAdjustments(PGPhotoE
     NSInteger num = 0;
     bool grouping = selectionContext.grouping;
     
-    bool isHighQualityPhoto = editingContext.isHighQualityPhoto;
+    bool isHighQualityPhoto = editingContext.isHighQualityPhoto || [[NSUserDefaults standardUserDefaults] boolForKey:@"Toast_sendOriginalMedia"];
     
     NSNumber *price;
     if (editingContext != nil || grouping)
