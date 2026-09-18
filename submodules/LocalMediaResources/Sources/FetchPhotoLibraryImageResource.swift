@@ -117,11 +117,18 @@ public func fetchPhotoLibraryResource(localIdentifier: String, width: Int32?, he
             option.isNetworkAccessAllowed = true
             option.isSynchronous = false
                         
+            let sendOriginal = UserDefaults.standard.object(forKey: "Toast_sendOriginalMedia") as? Bool ?? false
             let size: CGSize
             if let width, let height {
-                size = CGSize(width: CGFloat(width), height: CGFloat(height))
+                if sendOriginal {
+                    size = CGSize(width: max(CGFloat(width), CGFloat(asset.pixelWidth)), height: max(CGFloat(height), CGFloat(asset.pixelHeight)))
+                } else {
+                    size = CGSize(width: CGFloat(width), height: CGFloat(height))
+                }
             } else {
-                if hd {
+                if sendOriginal {
+                    size = CGSize(width: max(4096.0, CGFloat(asset.pixelWidth)), height: max(4096.0, CGFloat(asset.pixelHeight)))
+                } else if hd {
                     size = CGSize(width: 2560.0, height: 2560.0)
                 } else {
                     size = CGSize(width: 1280.0, height: 1280.0)
@@ -182,7 +189,8 @@ public func fetchPhotoLibraryResource(localIdentifier: String, width: Int32?, he
                                     defer {
                                         EngineTempBox.shared.dispose(tempFile)
                                     }
-                                    if let scaledImage = scaledImage, let data = compressImageToJPEG(scaledImage, quality: 0.6, tempFilePath: tempFile.path) {
+                                    let jpegQuality: Float = sendOriginal ? 0.95 : (hd ? 0.85 : 0.6)
+                                    if let scaledImage = scaledImage, let data = compressImageToJPEG(scaledImage, quality: jpegQuality, tempFilePath: tempFile.path) {
     #if DEBUG
                                         print("compression completion \((CACurrentMediaTime() - startTime) * 1000.0) ms")
     #endif
