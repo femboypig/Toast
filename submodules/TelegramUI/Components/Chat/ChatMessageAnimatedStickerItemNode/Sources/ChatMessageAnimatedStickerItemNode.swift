@@ -921,14 +921,13 @@ public class ChatMessageAnimatedStickerItemNode: ChatMessageItemView {
             switch item.chatLocation {
             case let .peer(peerId):
                 if peerId != item.context.account.peerId {
-                    let showAvatarsInDirect = UserDefaults.standard.object(forKey: "Toast_showAvatarsInDirectChats") as? Bool ?? true
-                    if (peerId.isGroupOrChannel || showAvatarsInDirect) && (item.message.author != nil || item.message.peers[item.message.id.peerId] != nil) {
+                    if peerId.isGroupOrChannel && item.message.author != nil {
                         if let peer = item.message.peers[item.message.id.peerId] as? TelegramChannel, case let .broadcast(info) = peer.info {
                             if info.flags.contains(.messagesShouldHaveProfiles) {
                                 hasAvatar = incoming
                             }
                         } else {
-                            hasAvatar = incoming
+                            hasAvatar = true
                         }
                     }
                 } else if incoming {
