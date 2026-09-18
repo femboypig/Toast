@@ -14,6 +14,7 @@ import AlertUI
 import ItemListPeerItem
 import ItemListPeerActionItem
 import PasscodeUI
+import TelegramUIPreferences
 
 private final class ToastPrivacySettingsControllerArguments {
     let context: AccountContext
@@ -302,7 +303,11 @@ private enum ToastPrivacyEntry: ItemListNodeEntry {
                 enabled: true,
                 selectable: true,
                 sectionId: self.section,
-                action: {}
+                action: {},
+                setPeerIdWithRevealedOptions: { _, _ in },
+                removePeer: { peerId in
+                    args.removeHiddenPeer(peerId)
+                }
             )
         case let .specificChatsInfo(text):
             return ItemListTextItem(presentationData: presentationData, text: .plain(text), sectionId: self.section)
