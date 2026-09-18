@@ -414,11 +414,11 @@ public func legacyAssetPickerEnqueueMessages(
                                         defer {
                                             EngineTempBox.shared.dispose(tempFile)
                                         }
-                                        let jpegQuality: CGFloat = sendOriginal ? 0.95 : (forceHd ? 0.85 : 0.6)
+                                        let jpegQuality: Float = sendOriginal ? 0.95 : (forceHd ? 0.85 : 0.6)
                                         if let scaledImageData = compressImageToJPEG(scaledImage, quality: jpegQuality, tempFilePath: tempFile.path) {
-                                            let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFilePath))
+                                            let _ = try? scaledImageData.write(to: URL(fileURLWithPath: tempFile.path))
 
-                                            let resource = LocalFileReferenceMediaResource(localFilePath: tempFilePath, randomId: randomId)
+                                            let resource = LocalFileReferenceMediaResource(localFilePath: tempFile.path, randomId: randomId)
                                             representations.append(TelegramMediaImageRepresentation(dimensions: PixelDimensions(scaledSize), resource: resource, progressiveSizes: [], immediateThumbnailData: nil, hasVideo: false, isPersonal: false))
                                             
                                             var imageFlags: TelegramMediaImageFlags = []
