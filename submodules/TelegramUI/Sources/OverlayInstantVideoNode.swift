@@ -21,6 +21,9 @@ final class OverlayInstantVideoNode: OverlayMediaItemNode, AVPictureInPictureSam
     
     private var validLayoutSize: CGSize?
     private var pipController: AVPictureInPictureController?
+    private var statusDisposable: Disposable?
+    private var currentPlaybackStatus: MediaPlayerStatus?
+    private var previousIsPlaying = false
     
     override var group: OverlayMediaItemNodeGroup? {
         return OverlayMediaItemNodeGroup(rawValue: 1)
@@ -77,6 +80,33 @@ final class OverlayInstantVideoNode: OverlayMediaItemNode, AVPictureInPictureSam
         }
         
         self.videoNode.canAttachContent = true
+
+        var invalidatedStateOnce = false
+        self.statusDisposable = (self.videoNode.status
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            guard let strongSelf = self else {
+                return
+            }
+            strongSelf.currentPlaybackStatus = status
+            if let status {
+                let isPlaying = status.status == .playing
+                if !invalidatedStateOnce {
+                    invalidatedStateOnce = true
+                    if #available(iOSApplicationExtension 15.0, iOS 15.0, *) {
+                        strongSelf.pipController?.invalidatePlaybackState()
+                    }
+                } else if strongSelf.previousIsPlaying != isPlaying {
+                    strongSelf.previousIsPlaying = isPlaying
+                    if #available(iOSApplicationExtension 15.0, iOS 15.0, *) {
+                        strongSelf.pipController?.invalidatePlaybackState()
+                    }
+                }
+            }
+        }).strict()
+    }
+
+    deinit {
+        self.statusDisposable?.dispose()
     }
     
     override func didLoad() {
@@ -167,26 +197,46 @@ final class OverlayInstantVideoNode: OverlayMediaItemNode, AVPictureInPictureSam
     }
 
     public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, setPlaying playing: Bool) {
-        if playing {
-            self.play()
-        } else {
-            self.pause()
-        }
+        self.videoNode.togglePlayPause()
     }
 
     public func pictureInPictureControllerTimeRangeForPlayback(_ pictureInPictureController: AVPictureInPictureController) -> CMTimeRange {
-        return CMTimeRange(start: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: 60.0, preferredTimescale: CMTimeScale(30.0)))
+        guard let status = self.currentPlaybackStatus else {
+            return CMTimeRange(start: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: 60.0, preferredTimescale: CMTimeScale(30.0)))
+        }
+        return CMTimeRange(start: CMTime(seconds: 0.0, preferredTimescale: CMTimeScale(30.0)), duration: CMTime(seconds: status.duration, preferredTimescale: CMTimeScale(30.0)))
     }
 
     public func pictureInPictureControllerIsPlaybackPaused(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
-        return false
+        guard let status = self.currentPlaybackStatus else {
+            return false
+        }
+        switch status.status {
+        case .playing:
+            return false
+        case .buffering, .paused:
+            return true
+        }
     }
 
     public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, didTransitionToRenderSize newRenderSize: CMVideoDimensions) {
     }
 
     public func pictureInPictureController(_ pictureInPictureController: AVPictureInPictureController, skipByInterval skipInterval: CMTime, completion completionHandler: @escaping () -> Void) {
-        completionHandler()
+        let _ = (self.videoNode.status
+        |> take(1)
+        |> deliverOnMainQueue).start(next: { [weak self] status in
+            if let strongSelf = self, let timestamp = status?.timestamp, let duration = status?.duration {
+                let nextTimestamp = timestamp + skipInterval.seconds
+                if nextTimestamp > duration {
+                    strongSelf.videoNode.seek(0.0)
+                    strongSelf.videoNode.pause()
+                } else {
+                    strongSelf.videoNode.seek(max(0.0, min(duration, nextTimestamp)))
+                }
+            }
+            completionHandler()
+        })
     }
 
     public func pictureInPictureControllerShouldProhibitBackgroundAudioPlayback(_ pictureInPictureController: AVPictureInPictureController) -> Bool {
