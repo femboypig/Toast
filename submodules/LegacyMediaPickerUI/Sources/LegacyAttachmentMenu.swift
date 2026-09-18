@@ -13,7 +13,7 @@ import Photos
 
 public func defaultVideoPresetForContext(_ context: AccountContext) -> TGMediaVideoConversionPreset {
     if UserDefaults.standard.object(forKey: "Toast_sendOriginalMedia") as? Bool ?? false {
-        return TGMediaVideoConversionPresetCompressedVeryHigh
+        return TGMediaVideoConversionPresetPassthrough
     }
     var networkType: NetworkType = .wifi
     let _ = (context.account.networkType
